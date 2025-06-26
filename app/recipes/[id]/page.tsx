@@ -1,5 +1,3 @@
-Here's the fixed version of the file with all missing closing brackets added:
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -257,12 +255,12 @@ export default function RecipeDetailPage() {
             <Card padding="sm" className="text-center">
               <Clock className="w-6 h-6 text-orange-500 mx-auto mb-2" />
               <div className="text-sm text-gray-600">Prep Time</div>
-              <div className="font-b\old">{recipe.prep_\time}m</div>
+              <div className="font-bold">{recipe.prep_time}m</div>
             </Card>
             <Card padding="sm" className="text-center">
               <Clock className="w-6 h-6 text-green-500 mx-auto mb-2" />
               <div className="text-sm text-gray-600">Cook Time</div>
-            \  <div className="font-bold">{recipe.cook_time}m</div>
+              <div className="font-bold">{recipe.cook_time}m</div>
             </Card>
             <Card padding="sm" className="text-center">
               <Users className="w-6 h-6 text-blue-500 mx-auto mb-2" />
@@ -299,7 +297,7 @@ export default function RecipeDetailPage() {
               size="lg"
               onClick={handleShare}
               icon={<Share2 className="w-5 h-5" />}
- \           >
+            >
               Share
             </Button>
           </div>
@@ -310,11 +308,86 @@ export default function RecipeDetailPage() {
           )}
 
           {/* Simple Voice Player for Introduction */}
-          {!showVoi\ceGuide && (
-   \         <Voice\Playe\r\ text={reci\pe.description} className="mb-8" />
+          {!showVoiceGuide && (
+            <VoicePlayer 
+              text={`Bienvenue dans la recette ${recipe.title}. Cette recette sert ${recipe.servings} personnes et prend environ ${totalTime} minutes à préparer. Cliquez sur "Guidage vocal étape par étape" pour commencer la cuisine assistée.`}
+              className="mb-8"
+            />
           )}
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Ingredients */}
+          <div className="lg:col-span-1">
+            <Card>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ingredients</h2>
+              <ul className="space-y-3">
+                {recipe.ingredients.map((ingredient, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span className="text-gray-700">{ingredient}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
+          {/* Instructions */}
+          <div className="lg:col-span-2">
+            <Card>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Instructions</h2>
+              <div className="space-y-6">
+                {recipe.steps.map((step, index) => (
+                  <div 
+                    key={index} 
+                    className={`flex p-4 rounded-lg transition-colors ${
+                      currentStep === index ? 'bg-orange-50 border-2 border-orange-200' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4 ${
+                      currentStep === index 
+                        ? 'bg-orange-500 text-white' 
+                        : 'bg-gray-300 text-gray-600'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-700 leading-relaxed">{step}</p>
+                      {currentStep === index && (
+                        <div className="mt-3 flex items-center space-x-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => setCurrentStep(Math.min(recipe.steps.length - 1, currentStep + 1))}
+                            disabled={currentStep === recipe.steps.length - 1}
+                          >
+                            Next Step
+                          </Button>
+                          <VoicePlayer 
+                            text={step}
+                            showSettings={false}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {currentStep < recipe.steps.length - 1 && (
+                <div className="mt-6 text-center">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setCurrentStep(0)}
+                  >
+                    Start from Beginning
+                  </Button>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
       </div>
+
       <Footer />
     </div>
   );

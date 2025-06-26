@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
 
+interface RecipeRow {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  prep_time: number;
+  cook_time: number;
+  servings: number;
+  difficulty: string;
+  category: string;
+  cuisine: string;
+  tags: string[];
+  rating: number;
+  rating_count: number;
+  created_at: string;
+  updated_at: string;
+  ingredients: any[];
+  steps: any[];
+}
+
+interface IngredientData {
+  name: string;
+  amount?: string;
+  unit?: string;
+  optional?: boolean;
+  order_index: number;
+}
+
+interface StepData {
+  step_number: number;
+  description: string;
+  duration?: number;
+  title?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -114,12 +149,12 @@ export async function GET(request: NextRequest) {
     const result = await query(recipesQuery, queryParams);
 
     // Transform the data to match the expected format
-    const recipes = result.rows.map(row => ({
+    const recipes = result.rows.map((row: RecipeRow) => ({
       ...row,
-      ingredients: Array.isArray(row.ingredients) ? row.ingredients.map((ing: any) => 
+      ingredients: Array.isArray(row.ingredients) ? row.ingredients.map((ing: IngredientData) => 
         `${ing.amount || ''} ${ing.unit || ''} ${ing.name}`.trim()
       ) : [],
-      steps: Array.isArray(row.steps) ? row.steps.map((step: any) => step.description) : []
+      steps: Array.isArray(row.steps) ? row.steps.map((step: StepData) => step.description) : []
     }));
 
     const hasMore = total > offset + limit;

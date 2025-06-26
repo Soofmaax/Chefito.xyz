@@ -19,20 +19,6 @@ import { useRevenueCat } from '@/hooks/useRevenueCat';
 import { apiService } from '@/services/api';
 import { Recipe } from '@/types';
 
-// Required for static export
-export async function generateStaticParams() {
-  // Generate static params for known recipe IDs
-  // In a real app, you'd fetch this from your API
-  return [
-    { id: '1' },
-    { id: '2' },
-    { id: '3' },
-    { id: '550e8400-e29b-41d4-a716-446655440001' },
-    { id: '550e8400-e29b-41d4-a716-446655440002' },
-    { id: '550e8400-e29b-41d4-a716-446655440003' },
-  ];
-}
-
 export default function RecipeDetailPage() {
   const params = useParams();
   const [recipe, setRecipe] = useState<Recipe | null>(null);

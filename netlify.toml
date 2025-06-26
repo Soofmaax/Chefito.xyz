@@ -1,0 +1,67 @@
+[build]
+  publish = "out"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+# Redirections pour les API routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Redirections pour les webhooks
+[[redirects]]
+  from = "/webhooks/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback pour toutes les autres routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers de sécurité
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# CORS pour les API
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# CORS pour les webhooks
+[[headers]]
+  for = "/webhooks/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Variables d'environnement à configurer dans le dashboard Netlify
+# NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# DATABASE_URL=postgresql://user:pass@your-vps:5432/chefito_db
+# POSTGRES_HOST=your-vps-ip
+# POSTGRES_PORT=5432
+# POSTGRES_DB=chefito_db
+# POSTGRES_USER=your_username
+# POSTGRES_PASSWORD=your_password
+# ELEVENLABS_API_KEY=your_elevenlabs_api_key
+# NEXT_PUBLIC_REVENUECAT_API_KEY=your_revenuecat_public_api_key

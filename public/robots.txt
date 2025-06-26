@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://chefito.netlify.app/sitemap.xml
+
+# Disallow admin/private areas (if any in future)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.netlify/
+
+# Allow important pages
+Allow: /
+Allow: /recipes
+Allow: /pricing
+Allow: /about
+Allow: /legal
+Allow: /auth/
+
+# Crawl delay (optional)
+Crawl-delay: 1

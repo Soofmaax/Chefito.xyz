@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuration pour export statique Netlify
-  output: 'export',
+  // Removed output: 'export' - not compatible with dynamic client pages
   trailingSlash: true,
-  distDir: 'out',
   
   // Images configuration
   images: {

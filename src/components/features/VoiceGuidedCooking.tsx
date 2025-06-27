@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { useVoicePlayer } from '@/hooks/useVoicePlayer';
 import { Recipe } from '@/types';
+import { AICookingAssistant } from './AICookingAssistant';
 
 interface VoiceGuidedCookingProps {
   recipe: Recipe;
@@ -238,8 +239,15 @@ export const VoiceGuidedCooking: React.FC<VoiceGuidedCookingProps> = ({
               </Button>
             </div>
 
+            {/* AI Cooking Assistant */}
+            <AICookingAssistant 
+              recipeId={recipe.id} 
+              currentStep={currentStep + 1} 
+              totalSteps={recipe.steps.length} 
+            />
+
             {/* All Steps Overview */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mt-6 mb-6">
               <h4 className="font-semibold text-gray-900">Toutes les étapes :</h4>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {recipe.steps.map((step, index) => (

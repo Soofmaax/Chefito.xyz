@@ -153,18 +153,7 @@ export const recipeApi = {
 export const authApi = {
   async signUp(email: string, password: string, fullName: string): Promise<User> {
     if (!isSupabaseConfigured()) {
-      // Demo mode
-      console.log('🔧 Demo mode: Simulating sign up');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return {
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        full_name: fullName,
-        skill_level: 'beginner',
-        dietary_restrictions: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      throw new ApiError('Authentication service not configured', 503);
     }
 
     try {
@@ -214,18 +203,7 @@ export const authApi = {
 
   async signIn(email: string, password: string): Promise<User> {
     if (!isSupabaseConfigured()) {
-      // Demo mode
-      console.log('🔧 Demo mode: Simulating sign in');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return {
-        id: '1',
-        email,
-        full_name: 'Demo User',
-        skill_level: 'beginner',
-        dietary_restrictions: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      throw new ApiError('Authentication service not configured', 503);
     }
 
     try {
@@ -263,7 +241,7 @@ export const authApi = {
 export const ttsApi = {
   async generateSpeech(text: string, voiceId: string = 'default'): Promise<Blob> {
     try {
-      const response = await fetch('/api/tts', {
+      const response = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${voiceId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

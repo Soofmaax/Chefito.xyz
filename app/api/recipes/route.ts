@@ -50,35 +50,13 @@ export async function GET(request: NextRequest) {
 
     // Check if PostgreSQL is configured
     if (!isPostgreSQLConfigured()) {
-      // Return demo data if PostgreSQL is not configured
-      const demoRecipes = [
+      return NextResponse.json(
         {
-          id: '1',
-          title: 'Perfect Scrambled Eggs',
-          description: 'Learn the fundamentals of cooking with this beginner-friendly scrambled eggs recipe.',
-          image_url: 'https://images.pexels.com/photos/824635/pexels-photo-824635.jpeg',
-          prep_time: 5,
-          cook_time: 5,
-          servings: 1,
-          difficulty: 'beginner',
-          category: 'breakfast',
-          cuisine: 'international',
-          tags: ['breakfast', 'quick', 'protein'],
-          rating: 4.5,
-          rating_count: 12,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-
-      return NextResponse.json({
-        success: true,
-        data: demoRecipes,
-        total: 1,
-        page: 1,
-        limit: 12,
-        has_more: false,
-      });
+          success: false,
+          error: 'Database not configured. Please configure PostgreSQL connection.',
+        },
+        { status: 503 }
+      );
     }
 
     // Build WHERE clause
@@ -188,7 +166,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'PostgreSQL not configured',
+          error: 'Database not configured. Please configure PostgreSQL connection.',
         },
         { status: 503 }
       );

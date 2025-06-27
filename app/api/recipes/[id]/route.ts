@@ -7,40 +7,13 @@ export async function GET(
 ) {
   try {
     if (!isPostgreSQLConfigured()) {
-      // Return demo recipe if PostgreSQL is not configured
-      const demoRecipe = {
-        id: params.id,
-        title: 'Perfect Scrambled Eggs',
-        description: 'Learn the fundamentals of cooking with this beginner-friendly scrambled eggs recipe.',
-        image_url: 'https://images.pexels.com/photos/824635/pexels-photo-824635.jpeg',
-        prep_time: 5,
-        cook_time: 5,
-        servings: 1,
-        difficulty: 'beginner',
-        category: 'breakfast',
-        cuisine: 'international',
-        tags: ['breakfast', 'quick', 'protein'],
-        ingredients: ['3 large eggs', '1 tablespoon butter', 'Salt to taste', 'Black pepper to taste'],
-        steps: [
-          'Crack 3 eggs into a bowl',
-          'Add a pinch of salt and pepper',
-          'Whisk eggs until well combined',
-          'Heat butter in a non-stick pan over low heat',
-          'Pour eggs into the pan',
-          'Gently stir with a spatula as eggs cook',
-          'Remove from heat when eggs are still slightly wet',
-          'Serve immediately'
-        ],
-        rating: 4.5,
-        rating_count: 12,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      return NextResponse.json({
-        success: true,
-        data: demoRecipe,
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Database not configured. Please configure PostgreSQL connection.',
+        },
+        { status: 503 }
+      );
     }
 
     const recipeQuery = `
@@ -127,7 +100,7 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          error: 'PostgreSQL not configured',
+          error: 'Database not configured. Please configure PostgreSQL connection.',
         },
         { status: 503 }
       );
@@ -206,7 +179,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: 'PostgreSQL not configured',
+          error: 'Database not configured. Please configure PostgreSQL connection.',
         },
         { status: 503 }
       );

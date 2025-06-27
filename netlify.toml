@@ -18,12 +18,6 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# SPA fallback pour toutes les autres routes
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Headers de sécurité
 [[headers]]
   for = "/*"

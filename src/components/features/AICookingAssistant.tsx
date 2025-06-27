@@ -1,118 +1,116 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Volume2, VolumeX, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { useToast } from '@/components/ui/Toast';
+import React, { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Send, Volume2, VolumeX, MessageCircle, Bot, User, Loader2 } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
+import { Input } from '../ui/Input';
+import { useToast } from '../ui/Toast';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 interface AICookingAssistantProps {
   recipeId: string;
   currentStep: number;
-  totalSteps: number;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+  className?: string;
 }
 
 export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
   recipeId,
   currentStep,
-  totalSteps,
+  className,
 }) => {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
 
-  // Speech recognition setup
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  useEffect(() => {
-    // Initialize speech recognition
-    if (typeof window !== 'undefined' && 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'fr-FR'; // Set to French
-
-      recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setTranscript(transcript);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        setIsListening(false);
-        showToast({
-          type: 'error',
-          title: 'Erreur de reconnaissance vocale',
-          message: 'Impossible de reconnaître votre voix. Veuillez réessayer ou utiliser le texte.',
-        });
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-    };
-  }, [showToast]);
-
-  // Scroll to bottom of chat when new messages are added
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatHistory]);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
+  const {
+    isListening,
+    transcript,
+    startListening,
+    stopListening,
+    isSupported: speechSupported,
+    error: speechError,
+  } = useSpeechRecognition({
+    onResult: (finalTranscript) => {
+      setInputText(finalTranscript);
+    },
+    onError: (error) => {
       showToast({
         type: 'error',
-        title: 'Non supporté',
-        message: 'La reconnaissance vocale n\'est pas supportée par votre navigateur.',
+        title: 'Erreur de reconnaissance vocale',
+        message: error,
       });
+    },
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Update input with live transcript
+  useEffect(() => {
+    if (transcript && isListening) {
+      setInputText(transcript);
+    }
+  }, [transcript, isListening]);
+
+  const handleVoiceToggle = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      if (speechSupported) {
+        startListening();
+      } else {
+        showToast({
+          type: 'error',
+          title: 'Reconnaissance vocale non supportée',
+          message: 'Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez la saisie texte.',
+        });
+      }
+    }
+  };
+
+  const speakText = (text: string) => {
+    if (!voiceEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      setTranscript('');
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 0.8;
+
+    speechSynthesis.speak(utterance);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTranscript(e.target.value);
-  };
+  const sendMessage = async (question: string) => {
+    if (!question.trim() || isLoading) return;
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    if (!transcript.trim()) return;
-    
-    const userQuestion = transcript.trim();
-    
-    // Add user message to chat
-    setChatHistory(prev => [...prev, { role: 'user', content: userQuestion }]);
-    
-    // Clear input
-    setTranscript('');
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: question.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
     setIsLoading(true);
 
     try {
@@ -124,131 +122,264 @@ export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
         body: JSON.stringify({
           recipeId,
           stepNumber: currentStep,
-          question: userQuestion,
+          question: question.trim(),
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to get answer from Chefito AI');
+        throw new Error(data.error || 'Erreur lors de la communication avec l\'assistant');
       }
 
-      const data = await response.json();
-      
-      // Add assistant response to chat
-      setChatHistory(prev => [...prev, { role: 'assistant', content: data.answer }]);
-      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: data.data.answer,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
       // Speak the response if voice is enabled
-      if (voiceEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(data.answer);
-        utterance.lang = 'fr-FR';
-        window.speechSynthesis.speak(utterance);
+      if (voiceEnabled) {
+        speakText(data.data.answer);
       }
-    } catch (error) {
-      console.error('Error getting AI response:', error);
+
+      showToast({
+        type: 'success',
+        title: 'Réponse reçue',
+        message: 'Chefito a répondu à votre question !',
+      });
+
+    } catch (error: any) {
+      console.error('Erreur Chef IA:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'Je suis désolé, je ne peux pas répondre à votre question pour le moment. Veuillez réessayer ou consulter les instructions écrites.',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+
       showToast({
         type: 'error',
-        title: 'Erreur',
-        message: 'Impossible de contacter l\'assistant Chefito. Veuillez réessayer.',
+        title: 'Erreur de l\'assistant',
+        message: error.message || 'Impossible de contacter l\'assistant culinaire',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleVoice = () => {
-    setVoiceEnabled(!voiceEnabled);
-    
-    // Stop any ongoing speech when turning off
-    if (voiceEnabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(inputText);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputText);
     }
   };
 
-  return (
-    <Card className="mt-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-900">Assistant Chefito IA</h3>
+  if (!isExpanded) {
+    return (
+      <div className={className}>
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleVoice}
-          aria-label={voiceEnabled ? 'Désactiver la voix' : 'Activer la voix'}
+          onClick={() => setIsExpanded(true)}
+          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+          icon={<MessageCircle className="w-5 h-5" />}
         >
-          {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          Demander de l'aide à Chefito IA
         </Button>
       </div>
+    );
+  }
 
-      {/* Chat history */}
-      <div 
-        ref={chatContainerRef}
-        className="bg-gray-50 rounded-lg p-4 mb-4 h-64 overflow-y-auto"
-      >
-        {chatHistory.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <p>Posez une question à propos de cette étape de la recette.</p>
-            <p className="text-sm mt-2">Exemple: "Comment savoir si c'est assez cuit?"</p>
+  return (
+    <div className={className}>
+      <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Bot className="w-5 h-5 mr-2 text-blue-600" />
+            Assistant Culinaire IA
+          </h3>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              className="flex items-center"
+              title={voiceEnabled ? 'Désactiver la voix' : 'Activer la voix'}
+            >
+              {voiceEnabled ? (
+                <Volume2 className="w-4 h-4 text-green-600" />
+              ) : (
+                <VolumeX className="w-4 h-4 text-gray-400" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {chatHistory.map((message, index) => (
-              <div 
-                key={index} 
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+        </div>
+
+        {/* Messages */}
+        <div className="h-64 overflow-y-auto mb-4 space-y-3 bg-white rounded-lg p-3 border">
+          {messages.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <Bot className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">
+                Bonjour ! Je suis Chefito, votre assistant culinaire IA.
+                <br />
+                Posez-moi une question sur l'étape actuelle de votre recette !
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div 
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    message.role === 'user' 
-                      ? 'bg-orange-500 text-white' 
-                      : 'bg-white border border-gray-200'
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                    message.type === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                    <p className="text-sm text-gray-500">Chefito réfléchit...</p>
+                  <div className="flex items-start space-x-2">
+                    {message.type === 'assistant' && (
+                      <Bot className="w-4 h-4 mt-0.5 text-blue-600" />
+                    )}
+                    {message.type === 'user' && (
+                      <User className="w-4 h-4 mt-0.5 text-white" />
+                    )}
+                    <div>
+                      <p className="text-sm">{message.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {message.timestamp.toLocaleTimeString('fr-FR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          )}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 text-gray-800 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Bot className="w-4 h-4 text-blue-600" />
+                  <div className="flex items-center space-x-1">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Chefito réfléchit...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <div className="flex-1">
+              <Input
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={
+                  isListening 
+                    ? "🎤 Parlez maintenant..." 
+                    : "Posez votre question sur cette étape..."
+                }
+                disabled={isLoading}
+                className={isListening ? 'border-red-300 bg-red-50' : ''}
+              />
+            </div>
+            
+            {speechSupported && (
+              <Button
+                type="button"
+                variant={isListening ? 'danger' : 'outline'}
+                size="md"
+                onClick={handleVoiceToggle}
+                disabled={isLoading}
+                className="px-3"
+                title={isListening ? 'Arrêter l\'écoute' : 'Commencer l\'écoute vocale'}
+              >
+                {isListening ? (
+                  <MicOff className="w-4 h-4" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
+              </Button>
+            )}
+            
+            <Button
+              type="submit"
+              disabled={!inputText.trim() || isLoading}
+              className="px-3"
+              title="Envoyer la question"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {speechError && (
+            <p className="text-sm text-red-600">
+              Erreur vocale: {speechError}
+            </p>
+          )}
+
+          <div className="text-xs text-gray-500 text-center">
+            {speechSupported ? (
+              <>
+                💡 Utilisez le microphone pour poser vos questions vocalement ou tapez votre question.
+                <br />
+                Appuyez sur Entrée pour envoyer.
+              </>
+            ) : (
+              <>
+                💡 Tapez votre question et appuyez sur Entrée pour l'envoyer.
+                <br />
+                La reconnaissance vocale n'est pas supportée par votre navigateur.
+              </>
             )}
           </div>
-        )}
-      </div>
+        </form>
 
-      {/* Input area */}
-      <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-        <Button
-          type="button"
-          variant={isListening ? 'primary' : 'outline'}
-          onClick={toggleListening}
-          className="flex-shrink-0"
-          aria-label={isListening ? 'Arrêter l\'écoute' : 'Commencer l\'écoute'}
-        >
-          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </Button>
-        
-        <input
-          type="text"
-          value={transcript}
-          onChange={handleInputChange}
-          placeholder="Posez une question sur cette étape..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          disabled={isLoading}
-        />
-        
-        <Button
-          type="submit"
-          disabled={!transcript.trim() || isLoading}
-          className="flex-shrink-0"
-        >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-        </Button>
-      </form>
-    </Card>
+        {/* Context Info */}
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-800">
+            <strong>Contexte:</strong> Étape {currentStep} de votre recette
+            <br />
+            <span className="text-xs text-blue-600">
+              Chefito connaît votre recette et peut vous aider spécifiquement sur cette étape.
+            </span>
+          </p>
+        </div>
+      </Card>
+    </div>
   );
 };

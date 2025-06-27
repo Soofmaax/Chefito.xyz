@@ -3,7 +3,27 @@
 > **Built for World's Largest Hackathon by Bolt** 🏆  
 > Created by **Salwa Essafi (@Soofmaax)**
 
-A production-ready cooking assistant platform that makes cooking accessible and enjoyable for beginners through interactive recipes and AI-powered voice guidance.
+A production-ready cooking assistant platform that makes cooking accessible and enjoyable for beginners through interactive recipes, AI-powered voice guidance, and intelligent cooking assistance.
+
+## 🚀 **New Features - AI Cooking Assistant**
+
+### **🤖 Interactive AI Assistant**
+- **Real-time cooking help** via voice or text questions
+- **Context-aware responses** based on current recipe and step
+- **Voice input and output** for hands-free operation
+- **Powered by Ollama** running locally on your VPS
+
+### **🎤 Voice Integration**
+- **Speech Recognition** for voice questions using Web Speech API
+- **Text-to-Speech** responses for hands-free cooking
+- **Fallback text input** when voice isn't available
+- **Smart voice controls** with mute/unmute options
+
+### **💬 Chat Interface**
+- **Clean chat bubbles** for user questions and AI responses
+- **Loading states** and error handling
+- **Message history** during cooking session
+- **Context display** showing current recipe step
 
 ## 🏗️ **Architecture Overview**
 
@@ -12,18 +32,66 @@ A production-ready cooking assistant platform that makes cooking accessible and 
 - **Recipe Database** → Your **PostgreSQL VPS** 🗄️
 - **User Authentication** → **Supabase** (backend service) 🔐
 - **Voice AI** → **ElevenLabs API** 🎤
+- **AI Assistant** → **Ollama (Llama3)** on VPS 🤖
 - **Subscriptions** → **Ready for RevenueCat** 💳 (Demo mode)
 
 ### **Important Notes**
 - ✅ **Netlify** hosts your Next.js frontend application
 - ✅ **Supabase** provides authentication services (not hosting)
-- ✅ **Your VPS** stores all recipe data in PostgreSQL
+- ✅ **Your VPS** stores all recipe data in PostgreSQL + runs Ollama
 - ✅ **ElevenLabs** provides voice synthesis
+- ✅ **Ollama** provides AI cooking assistance
 - 🔧 **RevenueCat** ready for integration (currently in demo mode)
 
 ## 🚀 **Deployment Guide**
 
-### **1. Frontend Deployment (Netlify)**
+### **1. VPS Security Setup (CRITICAL FIRST STEP)**
+
+Run the security setup script to create a non-root user and secure your VPS:
+
+```bash
+# Make the script executable
+chmod +x scripts/setup_vps_security.sh
+
+# Update the VPS IP in the script
+nano scripts/setup_vps_security.sh
+# Change: IONOS_IP="your_vps_ip_here"
+
+# Run the security setup
+./scripts/setup_vps_security.sh
+```
+
+This script will:
+- ✅ Create a secure non-root user (`chefito-user`)
+- ✅ Configure SSH keys
+- ✅ Set up firewall rules
+- ✅ Install PostgreSQL, Ollama, and dependencies
+- ✅ Configure services
+
+### **2. Automated Recipe Pipeline**
+
+Use the enhanced pipeline script to manage 30+ recipes automatically:
+
+```bash
+# Make the script executable
+chmod +x scripts/run_recipe_pipeline.sh
+
+# Update configuration variables
+nano scripts/run_recipe_pipeline.sh
+# Update: PROJECT_ID, BUCKET_NAME, SPOONACULAR_API_KEY, IONOS_IP, etc.
+
+# Run the automated pipeline
+./scripts/run_recipe_pipeline.sh
+```
+
+**Pipeline Features:**
+- 🔍 **Dynamic recipe search** via Spoonacular API
+- 🤖 **Semi-automatic restructuring** (saves 4+ hours)
+- 💡 **AI-suggested common instructions** (saves 1+ hour)
+- 🎵 **Automated audio generation**
+- 🚀 **Automatic VPS deployment**
+
+### **3. Frontend Deployment (Netlify)**
 
 #### **Étape 1: Préparer le projet**
 ```bash
@@ -59,145 +127,73 @@ POSTGRES_PASSWORD=your_password
 # ElevenLabs
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
 
+# Ollama AI Assistant
+OLLAMA_ENDPOINT=http://your-vps-ip:11434/api/generate
+OLLAMA_MODEL=llama3:8b-instruct-q4_K_M
+
 # RevenueCat (Optional - for subscriptions)
 NEXT_PUBLIC_REVENUECAT_API_KEY=your_revenuecat_public_api_key
 ```
 
-### **2. Database Setup (Your VPS)**
-
-#### **Étape 1: Préparer PostgreSQL sur votre VPS**
-```bash
-# Se connecter à votre VPS
-ssh user@your-vps-ip
-
-# Installer PostgreSQL (si pas déjà fait)
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Créer la base de données
-sudo -u postgres createdb chefito_db
-sudo -u postgres createuser your_username
-sudo -u postgres psql -c "ALTER USER your_username PASSWORD 'your_password';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE chefito_db TO your_username;"
-```
-
-#### **Étape 2: Configurer les tables**
-```bash
-# Depuis votre projet local
-npm run db:migrate
-npm run db:seed
-```
-
-### **3. Supabase Setup (Auth uniquement)**
-
-#### **Étape 1: Créer un projet Supabase**
-1. Aller sur [supabase.com](https://supabase.com)
-2. Créer un nouveau projet
-3. Récupérer les clés API
-
-#### **Étape 2: Configurer l'authentification**
-```sql
--- Dans Supabase SQL Editor
-CREATE TABLE profiles (
-  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email text UNIQUE NOT NULL,
-  full_name text NOT NULL,
-  skill_level text DEFAULT 'beginner',
-  dietary_restrictions text[] DEFAULT '{}',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
--- Enable RLS
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
--- Policies
-CREATE POLICY "Users can read own profile"
-  ON profiles FOR SELECT
-  TO authenticated
-  USING (auth.uid() = id);
-```
-
-### **4. RevenueCat Setup (Optionnel - Abonnements)**
-
-> **Note:** RevenueCat est actuellement en mode démo. Pour l'activer en production :
-
-#### **Étape 1: Créer un compte RevenueCat**
-1. Aller sur [revenuecat.com](https://www.revenuecat.com)
-2. Créer un nouveau projet
-3. Configurer votre app
-
-#### **Étape 2: Configurer les produits**
-```
-Product ID: premium_monthly
-Price: 19.99€/mois
-Entitlement: premium
-```
-
-#### **Étape 3: Récupérer la clé API**
-- Dashboard RevenueCat → API Keys → Public API Key
-- Ajouter `NEXT_PUBLIC_REVENUECAT_API_KEY` dans Netlify
-
-#### **Étape 4: Installer la dépendance**
-```bash
-npm install @revenuecat/purchases-js
-```
-
 ## 📡 **API Architecture**
 
+### **New AI Assistant Endpoint**
+- `POST /api/chef-ia` → AI cooking assistance with context
+
+### **Existing Endpoints**
+- `/api/recipes` → Recipe CRUD operations
+- `/api/tts` → Text-to-speech conversion
+- `/api/subscription/status` → Subscription management
+
 ### **Netlify Functions**
-- `/api/recipes` → `netlify/functions/recipes.js`
-- `/api/tts` → `netlify/functions/tts.js`
-- `/webhooks/revenuecat` → `netlify/functions/revenuecat-webhook.js`
+- `netlify/functions/recipes.js` → Recipe data access
+- `netlify/functions/tts.js` → Voice synthesis
+- `netlify/functions/chef-ia.js` → AI assistant integration
 
-### **Flux de données**
-1. **Frontend** (Netlify) → **Netlify Functions** → **PostgreSQL VPS**
-2. **Frontend** (Netlify) → **Supabase Auth API**
-3. **Frontend** (Netlify) → **ElevenLabs API** (via Netlify Functions)
-4. **Frontend** (Netlify) → **RevenueCat API** (optionnel)
+## 🤖 **AI Assistant Features**
 
-## 🚀 **Local Development**
+### **Context-Aware Responses**
+The AI assistant understands:
+- Current recipe being cooked
+- Specific step the user is on
+- Recipe ingredients and tools
+- Cooking techniques involved
 
-### **Setup Steps**
-```bash
-# 1. Clone and install
-git clone https://github.com/soofmaax/chefito.git
-cd chefito
-npm install
-
-# 2. Configure environment
-cp .env.example .env.local
-# Edit .env.local with your credentials
-
-# 3. Setup database on your VPS
-npm run db:migrate
-npm run db:seed
-
-# 4. Start development
-npm run dev
+### **Example Interactions**
+```
+User: "My rice is sticky, what should I do?"
+AI: "For step 3 of your fried rice recipe, if the rice is sticky, 
+     it likely has too much moisture. Try increasing the heat 
+     slightly and stirring more frequently to evaporate excess 
+     water. Make sure your pan is hot enough before adding 
+     ingredients."
 ```
 
-## 🌐 **Production Checklist**
+### **Voice Integration**
+- 🎤 **Voice input**: Ask questions hands-free while cooking
+- 🔊 **Voice output**: AI responses read aloud automatically
+- 🔇 **Mute controls**: Toggle voice on/off as needed
+- 📱 **Fallback text**: Works even without voice support
 
-### **✅ Avant le déploiement**
-- [ ] PostgreSQL configuré sur votre VPS
-- [ ] Tables créées avec `npm run db:migrate`
-- [ ] Données de test avec `npm run db:seed`
-- [ ] Firewall VPS configuré (port 5432 ouvert)
-- [ ] Projet Supabase créé et configuré
-- [ ] Variables d'environnement ajoutées dans Netlify
-- [ ] Build test réussi localement
+## 🔧 **Technical Improvements**
 
-### **✅ Après le déploiement**
-- [ ] Site accessible sur Netlify
-- [ ] API recipes fonctionne
-- [ ] Authentification Supabase fonctionne
-- [ ] Voice AI fonctionne (ou fallback browser)
-- [ ] Responsive design testé
+### **Automated Recipe Processing**
+- **Time Reduction**: From ~15 hours to ~6 hours for 30+ recipes
+- **Semi-automatic restructuring**: 70% automated, 30% manual review
+- **Smart instruction detection**: AI suggests common cooking phrases
+- **Bulk processing**: Handle hundreds of recipes efficiently
 
-### **🔧 Optionnel (RevenueCat)**
-- [ ] RevenueCat configuré avec produits
-- [ ] Abonnements RevenueCat fonctionnent
+### **Enhanced Voice Features**
+- **Web Speech API**: Browser-native voice recognition
+- **Speech Synthesis**: Text-to-speech for AI responses
+- **Error handling**: Graceful fallbacks when voice unavailable
+- **Multi-language support**: French primary, extensible
+
+### **Security Enhancements**
+- **Non-root VPS user**: Secure deployment practices
+- **Firewall configuration**: Restricted access to necessary ports
+- **SSH key authentication**: No password-based access
+- **Service isolation**: Each component runs with minimal privileges
 
 ## 📱 **Features**
 
@@ -207,21 +203,27 @@ npm run dev
 - ✅ Recipe search and categorization
 - ✅ Rating and review system
 
+### **AI Cooking Assistant (NEW)**
+- ✅ Context-aware cooking help via voice or text
+- ✅ Real-time step-specific guidance
+- ✅ Hands-free voice interaction
+- ✅ Smart fallbacks and error handling
+
+### **Voice-Guided Cooking (Enhanced)**
+- ✅ Step-by-step voice instructions
+- ✅ Integrated AI assistant access
+- ✅ Progress tracking with visual feedback
+- ✅ Hands-free cooking mode
+
 ### **User Features (Supabase)**
 - ✅ User registration and login
 - ✅ Profile management with cooking preferences
 - ✅ Session management with JWT tokens
 
-### **Voice AI (ElevenLabs)**
-- ✅ Text-to-speech for recipe instructions
-- ✅ Customizable voice settings
-- ✅ Browser fallback support
-
 ### **Subscription Management (Demo Mode)**
 - 🔧 Free plan: 2 recipes with voice guidance
 - 🔧 Premium plan: Unlimited access (ready for RevenueCat)
 - 🔧 Subscription status tracking (demo)
-- 🔧 Purchase simulation
 
 ## 💳 **Subscription Plans (Demo Mode)**
 
@@ -233,9 +235,9 @@ npm run dev
 
 ### **👑 Plan Premium - 19,99€/mois (Demo)**
 - Accès illimité à toutes les recettes
-- Guidance vocale complète
+- Guidance vocale complète + Assistant IA
 - Toutes les catégories de cuisine
-- Mode mains libres
+- Mode mains libres avec IA
 - Support prioritaire
 - Nouvelles recettes en avant-première
 
@@ -252,20 +254,45 @@ npm run dev
    sudo tail -f /var/log/postgresql/postgresql-*.log
    ```
 
-2. **Build errors sur Netlify**
-   - Vérifier la version Node.js (18)
-   - Vérifier toutes les variables d'environnement
-   - Consulter les logs de build Netlify
+2. **Ollama non accessible**
+   ```bash
+   # Vérifier le service Ollama
+   sudo systemctl status ollama
+   
+   # Tester l'API
+   curl http://localhost:11434/api/tags
+   ```
 
-3. **RevenueCat en mode démo**
-   - Normal si la clé API n'est pas configurée
-   - Ajouter `NEXT_PUBLIC_REVENUECAT_API_KEY` pour activer
+3. **Assistant IA ne répond pas**
+   - Vérifier que Ollama fonctionne sur le VPS
+   - Vérifier les variables d'environnement OLLAMA_*
+   - Consulter les logs Netlify Functions
+
+4. **Reconnaissance vocale ne fonctionne pas**
+   - Vérifier les permissions microphone du navigateur
+   - Tester sur Chrome/Edge (meilleur support)
+   - Utiliser HTTPS (requis pour Web Speech API)
+
+## 🎯 **Performance Optimizations**
+
+### **Recipe Pipeline Efficiency**
+- **Parallel processing**: Multiple recipes processed simultaneously
+- **Caching**: Common instructions reused across recipes
+- **Batch operations**: Bulk database operations
+- **Smart filtering**: AI-suggested optimizations
+
+### **AI Response Speed**
+- **Local Ollama**: No external API latency
+- **Context caching**: Recipe context cached per session
+- **Streaming responses**: Real-time AI response delivery
+- **Fallback responses**: Instant fallbacks when AI unavailable
 
 ## 👥 **About the Creator**
 
 ### **Salwa Essafi (@Soofmaax)**
 - **Background:** Self-taught developer with commercial experience
 - **Vision:** Making cooking enjoyable and accessible for everyone
+- **Innovation:** Pioneering AI-assisted cooking education
 - **Contact:** contact@chefito.xyz
 - **GitHub:** [@soofmaax](https://github.com/soofmaax)
 - **LinkedIn:** [Salwa Essafi](https://www.linkedin.com/in/salwaessafi)
@@ -279,6 +306,6 @@ npm run dev
 ---
 
 **🏆 Built with ❤️ for World's Largest Hackathon by Bolt**  
-**🍳 Making cooking accessible, one recipe at a time**
+**🍳 Making cooking accessible with AI, one recipe at a time**
 
-*Created by Salwa Essafi (@Soofmaax) - January 2025*
+*Enhanced with AI Assistant by Salwa Essafi (@Soofmaax) - January 2025*

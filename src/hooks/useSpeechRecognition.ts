@@ -1,140 +1,211 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+'use client';
 
-interface UseSpeechRecognitionOptions {
-  language?: string;
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+interface SpeechRecognitionOptions {
+  onResult?: (transcript: string) => void;
+  onError?: (error: string) => void;
+  onStart?: () => void;
+  onEnd?: () => void;
   continuous?: boolean;
   interimResults?: boolean;
-  onError?: (error: SpeechRecognitionError) => void;
+  language?: string;
 }
 
-interface SpeechRecognitionError {
-  error: string;
-  message: string;
+interface SpeechRecognitionHook {
+  isListening: boolean;
+  transcript: string;
+  interimTranscript: string;
+  finalTranscript: string;
+  startListening: () => void;
+  stopListening: () => void;
+  resetTranscript: () => void;
+  isSupported: boolean;
+  error: string | null;
 }
 
-export const useSpeechRecognition = (options: UseSpeechRecognitionOptions = {}) => {
+// Extend Window interface for SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): SpeechRecognitionHook => {
+  const {
+    onResult,
+    onError,
+    onStart,
+    onEnd,
+    continuous = false,
+    interimResults = true,
+    language = 'fr-FR',
+  } = options;
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [finalTranscript, setFinalTranscript] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
-  
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  
-  const {
-    language = 'fr-FR',
-    continuous = false,
-    interimResults = false,
-    onError,
-  } = options;
+
+  const recognitionRef = useRef<any>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check browser support
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      setIsSupported(!!SpeechRecognition);
+    }
+  }, []);
 
   // Initialize speech recognition
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-      
-      if (SpeechRecognitionAPI) {
-        recognitionRef.current = new SpeechRecognitionAPI();
-        recognitionRef.current.continuous = continuous;
-        recognitionRef.current.interimResults = interimResults;
-        recognitionRef.current.lang = language;
-        
-        setIsSupported(true);
-      } else {
-        setIsSupported(false);
-        console.warn('Speech Recognition API is not supported in this browser');
-      }
-    }
+    if (!isSupported || typeof window === 'undefined') return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = continuous;
+    recognition.interimResults = interimResults;
+    recognition.lang = language;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setError(null);
+      onStart?.();
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscriptValue = '';
+      let finalTranscriptValue = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptPart = event.results[i][0].transcript;
+        
+        if (event.results[i].isFinal) {
+          finalTranscriptValue += transcriptPart;
+        } else {
+          interimTranscriptValue += transcriptPart;
+        }
+      }
+
+      setInterimTranscript(interimTranscriptValue);
+      
+      if (finalTranscriptValue) {
+        setFinalTranscript(prev => prev + finalTranscriptValue);
+        setTranscript(prev => prev + finalTranscriptValue);
+        onResult?.(finalTranscriptValue);
+      } else if (interimTranscriptValue) {
+        setTranscript(finalTranscript + interimTranscriptValue);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      let errorMessage = 'Erreur de reconnaissance vocale';
+      
+      switch (event.error) {
+        case 'no-speech':
+          errorMessage = 'Aucune parole détectée. Veuillez réessayer.';
+          break;
+        case 'audio-capture':
+          errorMessage = 'Impossible d\'accéder au microphone.';
+          break;
+        case 'not-allowed':
+          errorMessage = 'Permission microphone refusée.';
+          break;
+        case 'network':
+          errorMessage = 'Erreur réseau. Vérifiez votre connexion.';
+          break;
+        case 'service-not-allowed':
+          errorMessage = 'Service de reconnaissance vocale non autorisé.';
+          break;
+        default:
+          errorMessage = `Erreur: ${event.error}`;
+      }
+      
+      setError(errorMessage);
+      setIsListening(false);
+      onError?.(errorMessage);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      onEnd?.();
+      
+      // Clear timeout if it exists
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
+    recognitionRef.current = recognition;
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
-    };
-  }, [continuous, interimResults, language]);
-
-  // Set up event handlers
-  useEffect(() => {
-    if (!recognitionRef.current) return;
-    
-    const handleResult = (event: SpeechRecognitionEvent) => {
-      const current = event.resultIndex;
-      const transcript = event.results[current][0].transcript;
-      setTranscript(transcript);
-    };
-    
-    const handleEnd = () => {
-      setIsListening(false);
-    };
-    
-    const handleError = (event: SpeechRecognitionErrorEvent) => {
-      setIsListening(false);
-      
-      const error: SpeechRecognitionError = {
-        error: event.error,
-        message: getErrorMessage(event.error),
-      };
-      
-      if (onError) {
-        onError(error);
-      } else {
-        console.error('Speech recognition error:', error);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-    
-    recognitionRef.current.onresult = handleResult;
-    recognitionRef.current.onend = handleEnd;
-    recognitionRef.current.onerror = handleError;
-    
-  }, [onError]);
+  }, [isSupported, continuous, interimResults, language, onResult, onError, onStart, onEnd, finalTranscript]);
 
   const startListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) return;
-    
-    setTranscript('');
-    recognitionRef.current.start();
-    setIsListening(true);
-  }, [isSupported]);
+    if (!isSupported || !recognitionRef.current || isListening) return;
+
+    try {
+      setError(null);
+      setInterimTranscript('');
+      recognitionRef.current.start();
+
+      // Auto-stop after 30 seconds to prevent indefinite listening
+      timeoutRef.current = setTimeout(() => {
+        stopListening();
+      }, 30000);
+    } catch (error: any) {
+      setError('Impossible de démarrer la reconnaissance vocale');
+      onError?.('Impossible de démarrer la reconnaissance vocale');
+    }
+  }, [isSupported, isListening, onError]);
 
   const stopListening = useCallback(() => {
-    if (!recognitionRef.current || !isSupported) return;
-    
-    recognitionRef.current.stop();
-    setIsListening(false);
-  }, [isSupported]);
+    if (!recognitionRef.current || !isListening) return;
+
+    try {
+      recognitionRef.current.stop();
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    } catch (error: any) {
+      setError('Erreur lors de l\'arrêt de la reconnaissance');
+    }
+  }, [isListening]);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
+    setInterimTranscript('');
+    setFinalTranscript('');
+    setError(null);
   }, []);
-
-  // Helper function to get human-readable error messages
-  const getErrorMessage = (errorType: string): string => {
-    switch (errorType) {
-      case 'no-speech':
-        return 'Aucune parole n\'a été détectée.';
-      case 'audio-capture':
-        return 'Impossible d\'accéder au microphone.';
-      case 'not-allowed':
-        return 'L\'accès au microphone a été refusé.';
-      case 'network':
-        return 'Erreur réseau lors de la reconnaissance vocale.';
-      case 'aborted':
-        return 'La reconnaissance vocale a été annulée.';
-      case 'service-not-allowed':
-        return 'Le service de reconnaissance vocale n\'est pas autorisé.';
-      case 'bad-grammar':
-        return 'Problème avec la grammaire de reconnaissance.';
-      case 'language-not-supported':
-        return 'La langue sélectionnée n\'est pas prise en charge.';
-      default:
-        return `Erreur de reconnaissance vocale: ${errorType}`;
-    }
-  };
 
   return {
     isListening,
     transcript,
-    isSupported,
+    interimTranscript,
+    finalTranscript,
     startListening,
     stopListening,
     resetTranscript,
+    isSupported,
+    error,
   };
 };

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Square, SkipForward, SkipBack, Volume2, VolumeX, RotateCcw } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, SkipBack, Volume2, VolumeX, RotateCcw, MessageCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { AICookingAssistant } from './AICookingAssistant';
 import { useVoicePlayer } from '@/hooks/useVoicePlayer';
 import { Recipe } from '@/types';
-import { AICookingAssistant } from './AICookingAssistant';
 
 interface VoiceGuidedCookingProps {
   recipe: Recipe;
@@ -20,6 +20,7 @@ export const VoiceGuidedCooking: React.FC<VoiceGuidedCookingProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(new Array(recipe.steps.length).fill(false));
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   const {
     isPlaying,
@@ -50,6 +51,7 @@ export const VoiceGuidedCooking: React.FC<VoiceGuidedCookingProps> = ({
 
   const endCookingSession = () => {
     setIsSessionActive(false);
+    setShowAIAssistant(false);
     stop();
   };
 
@@ -148,7 +150,7 @@ export const VoiceGuidedCooking: React.FC<VoiceGuidedCookingProps> = ({
             </h3>
             <p className="text-gray-600 mb-6">
               Je vais vous guider étape par étape avec des instructions audio claires. 
-              Vous pourrez cuisiner les mains libres !
+              Vous pourrez cuisiner les mains libres et demander de l'aide à tout moment !
             </p>
             <Button
               onClick={startCookingSession}
@@ -237,17 +239,29 @@ export const VoiceGuidedCooking: React.FC<VoiceGuidedCookingProps> = ({
               >
                 Suivant
               </Button>
+
+              <Button
+                onClick={() => setShowAIAssistant(!showAIAssistant)}
+                variant={showAIAssistant ? 'primary' : 'outline'}
+                icon={<MessageCircle className="w-4 h-4" />}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+              >
+                Assistant IA
+              </Button>
             </div>
 
             {/* AI Cooking Assistant */}
-            <AICookingAssistant 
-              recipeId={recipe.id} 
-              currentStep={currentStep + 1} 
-              totalSteps={recipe.steps.length} 
-            />
+            {showAIAssistant && (
+              <div className="mb-6">
+                <AICookingAssistant
+                  recipeId={recipe.id}
+                  currentStep={currentStep + 1}
+                />
+              </div>
+            )}
 
             {/* All Steps Overview */}
-            <div className="space-y-3 mt-6 mb-6">
+            <div className="space-y-3 mb-6">
               <h4 className="font-semibold text-gray-900">Toutes les étapes :</h4>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {recipe.steps.map((step, index) => (

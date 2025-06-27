@@ -2,6 +2,8 @@
 declare global {
   interface Window {
     speechSynthesis: SpeechSynthesis;
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
   }
 }
 

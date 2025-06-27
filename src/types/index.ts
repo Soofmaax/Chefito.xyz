@@ -67,3 +67,21 @@ export interface LoadingState {
 export interface FormErrors {
   [key: string]: string;
 }
+
+export interface AIAssistantRequest {
+  recipeId: string;
+  stepNumber: number;
+  question: string;
+}
+
+export interface AIAssistantResponse {
+  success: boolean;
+  answer: string;
+  error?: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: string;
+}

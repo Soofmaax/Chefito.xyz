@@ -1,18 +1,19 @@
-# Ignore files for TypeScript checking
+# Files to ignore during TypeScript checking
 app/about/page.tsx
 app/admin/page.tsx
 app/admin/recipes/new/page.tsx
 app/auth/login/page.tsx
 app/auth/register/page.tsx
 app/error.tsx
+app/layout.tsx
 app/legal/page.tsx
 app/loading.tsx
 app/not-found.tsx
 app/page.tsx
+app/pricing/page.tsx
 app/profile/page.tsx
 app/recipes/[id]/page.tsx
 app/recipes/page.tsx
-app/layout.tsx
 src/components/admin/AdminGuard.tsx
 src/components/admin/AdminHeader.tsx
 src/components/features/AICookingAssistant.tsx
@@ -34,9 +35,3 @@ src/components/ui/Loading.tsx
 src/components/ui/Modal.tsx
 src/components/ui/StatusBanner.tsx
 src/components/ui/Toast.tsx
-src/hooks/useAdminAuth.ts
-src/hooks/useAuth.ts
-src/hooks/useRevenueCat.ts
-src/hooks/useSpeechRecognition.ts
-src/hooks/useVoicePlayer.ts
-src/lib/database.ts

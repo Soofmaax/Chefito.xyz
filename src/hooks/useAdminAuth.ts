@@ -23,6 +23,8 @@ export const useAdminAuth = () => {
 
   const signInAsAdmin = async (email: string, password: string) => {
     try {
+      setLoading(true);
+      
       // Check super admin credentials
       if (email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
         // Sign in with super admin credentials
@@ -54,6 +56,8 @@ export const useAdminAuth = () => {
         message: 'Incorrect email or password.',
       });
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 

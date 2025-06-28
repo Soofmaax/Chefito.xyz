@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { User } from '@/types';
+import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD } from '@/middleware/adminAuth';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -131,8 +132,35 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
-      // Demo mode
+      // Demo mode - handle admin login specially
       console.log('🔧 Demo mode: Simulating sign in');
+      
+      // Check if this is the admin login
+      if (email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
+        const adminUser: User = {
+          id: 'admin-1',
+          email: SUPER_ADMIN_EMAIL,
+          full_name: 'Super Admin',
+          skill_level: 'advanced',
+          dietary_restrictions: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          role: 'super_admin',
+          permissions: [
+            'recipes:read',
+            'recipes:write',
+            'recipes:delete',
+            'users:read',
+            'users:write',
+            'users:delete',
+            'admin:full_access'
+          ]
+        };
+        setUser(adminUser);
+        return adminUser;
+      }
+      
+      // Regular user login
       const mockUser: User = {
         id: '1',
         email,
@@ -141,18 +169,22 @@ export const useAuth = () => {
         dietary_restrictions: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        role: 'user',
+        permissions: ['profile:read', 'profile:write', 'recipes:read']
       };
       setUser(mockUser);
-      return;
+      return mockUser;
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      
+      return data.user;
     } catch (error: any) {
       console.error('Sign in error:', error);
       throw error;

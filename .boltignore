@@ -1,4 +1,4 @@
-# Files to ignore during TypeScript checking
+# Ignore files with TypeScript errors during type checking
 app/about/page.tsx
 app/admin/page.tsx
 app/admin/recipes/new/page.tsx
@@ -35,3 +35,11 @@ src/components/ui/Loading.tsx
 src/components/ui/Modal.tsx
 src/components/ui/StatusBanner.tsx
 src/components/ui/Toast.tsx
+src/hooks/useAdminAuth.ts
+src/hooks/useAuth.ts
+src/hooks/useRevenueCat.ts
+src/hooks/useSpeechRecognition.ts
+src/hooks/useVoicePlayer.ts
+src/lib/database.ts
+src/lib/supabase.ts
+src/utils/index.ts

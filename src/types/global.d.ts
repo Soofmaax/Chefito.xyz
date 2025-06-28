@@ -6,23 +6,6 @@ declare global {
     webkitSpeechRecognition: typeof SpeechRecognition;
   }
 
-  namespace NodeJS {
-    interface ProcessEnv {
-      NEXT_PUBLIC_SUPABASE_URL: string;
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
-      SUPABASE_SERVICE_ROLE_KEY: string;
-      DATABASE_URL: string;
-      POSTGRES_HOST: string;
-      POSTGRES_PORT: string;
-      POSTGRES_DB: string;
-      POSTGRES_USER: string;
-      POSTGRES_PASSWORD: string;
-      ELEVENLABS_API_KEY: string;
-      NEXT_PUBLIC_REVENUECAT_API_KEY: string;
-      NODE_ENV: 'development' | 'production' | 'test';
-    }
-  }
-
   interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList;
     resultIndex: number;

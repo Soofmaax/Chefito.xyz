@@ -15,7 +15,13 @@ declare namespace NodeJS {
     NEXT_PUBLIC_REVENUECAT_API_KEY: string;
     NEXTAUTH_SECRET: string;
     NEXTAUTH_URL: string;
+    OLLAMA_ENDPOINT: string;
+    OLLAMA_MODEL: string;
+    CONTACT_EMAIL: string;
+    TELEGRAM_BOT: string;
   }
+
+  interface Timeout {}
 }
 
 export {};

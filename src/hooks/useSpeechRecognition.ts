@@ -24,14 +24,6 @@ interface SpeechRecognitionHook {
   error: string | null;
 }
 
-// Extend Window interface for SpeechRecognition
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
-
 export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): SpeechRecognitionHook => {
   const {
     onResult,
@@ -51,7 +43,7 @@ export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): Sp
   const [isSupported, setIsSupported] = useState(false);
 
   const recognitionRef = useRef<any>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<any>(null);
 
   // Check browser support
   useEffect(() => {

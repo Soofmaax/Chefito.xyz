@@ -5,6 +5,60 @@ declare global {
     SpeechRecognition: typeof SpeechRecognition;
     webkitSpeechRecognition: typeof SpeechRecognition;
   }
+
+  namespace NodeJS {
+    interface ProcessEnv {
+      NEXT_PUBLIC_SUPABASE_URL: string;
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
+      SUPABASE_SERVICE_ROLE_KEY: string;
+      DATABASE_URL: string;
+      POSTGRES_HOST: string;
+      POSTGRES_PORT: string;
+      POSTGRES_DB: string;
+      POSTGRES_USER: string;
+      POSTGRES_PASSWORD: string;
+      ELEVENLABS_API_KEY: string;
+      NEXT_PUBLIC_REVENUECAT_API_KEY: string;
+      NODE_ENV: 'development' | 'production' | 'test';
+    }
+  }
+
+  interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+    resultIndex: number;
+  }
+
+  interface SpeechRecognitionResultList {
+    [index: number]: SpeechRecognitionResult;
+    length: number;
+    item(index: number): SpeechRecognitionResult;
+  }
+
+  interface SpeechRecognitionResult {
+    [index: number]: SpeechRecognitionAlternative;
+    length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    isFinal: boolean;
+  }
+
+  interface SpeechRecognitionAlternative {
+    transcript: string;
+    confidence: number;
+  }
+
+  interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    maxAlternatives: number;
+    onresult: (event: SpeechRecognitionEvent) => void;
+    onstart: () => void;
+    onend: () => void;
+    onerror: (event: any) => void;
+    start(): void;
+    stop(): void;
+    abort(): void;
+  }
 }
 
 // Types pour les modules sans déclarations
@@ -26,24 +80,6 @@ declare module '*.jpeg' {
 declare module '*.svg' {
   const value: string;
   export default value;
-}
-
-// Types pour les variables d'environnement
-declare namespace NodeJS {
-  interface ProcessEnv {
-    NEXT_PUBLIC_SUPABASE_URL: string;
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
-    SUPABASE_SERVICE_ROLE_KEY: string;
-    DATABASE_URL: string;
-    POSTGRES_HOST: string;
-    POSTGRES_PORT: string;
-    POSTGRES_DB: string;
-    POSTGRES_USER: string;
-    POSTGRES_PASSWORD: string;
-    ELEVENLABS_API_KEY: string;
-    NEXT_PUBLIC_REVENUECAT_API_KEY: string;
-    NODE_ENV: 'development' | 'production' | 'test';
-  }
 }
 
 export {};

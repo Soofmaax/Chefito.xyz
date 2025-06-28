@@ -1,0 +1,132 @@
+# Configuration Netlify pour Architecture Multi-Domaines Chefito
+
+# =============================================================================
+# SITE PRINCIPAL - chefito.xyz
+# =============================================================================
+[build]
+  publish = ".next"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NEXT_PUBLIC_APP_URL = "https://app.chefito.xyz"
+  NEXT_PUBLIC_API_URL = "https://api.chefito.xyz"
+  NEXT_PUBLIC_CDN_URL = "https://cdn.chefito.xyz"
+
+# Redirections vers les sous-domaines
+[[redirects]]
+  from = "/app/*"
+  to = "https://app.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://admin.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/docs/*"
+  to = "https://docs.chefito.xyz/:splat"
+  status = 301
+
+# =============================================================================
+# APPLICATION WEB - app.chefito.xyz
+# =============================================================================
+# [build]
+#   publish = ".next"
+#   command = "npm run build:app"
+# 
+# [build.environment]
+#   NODE_VERSION = "18"
+#   NEXT_PUBLIC_API_URL = "https://api.chefito.xyz"
+#   NEXT_PUBLIC_AI_URL = "https://ai.chefito.xyz"
+#   NEXT_PUBLIC_VOICE_URL = "https://voice.chefito.xyz"
+#   NEXT_PUBLIC_MAIN_SITE = "https://chefito.xyz"
+
+# =============================================================================
+# API - api.chefito.xyz
+# =============================================================================
+# [build]
+#   publish = "dist"
+#   command = "npm run build:api"
+# 
+# [build.environment]
+#   NODE_VERSION = "18"
+#   ALLOWED_ORIGINS = "https://chefito.xyz,https://app.chefito.xyz,https://admin.chefito.xyz"
+
+# Headers CORS pour API
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://chefito.xyz, https://app.chefito.xyz, https://admin.chefito.xyz"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Allow-Credentials = "true"
+
+# =============================================================================
+# CDN - cdn.chefito.xyz
+# =============================================================================
+# Configuration pour assets statiques
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Access-Control-Allow-Origin = "*"
+
+# =============================================================================
+# SÉCURITÉ GLOBALE
+# =============================================================================
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
+
+# Content Security Policy adaptée aux sous-domaines
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = """
+      default-src 'self' *.chefito.xyz;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' *.chefito.xyz;
+      style-src 'self' 'unsafe-inline' *.chefito.xyz;
+      img-src 'self' data: https: *.chefito.xyz *.pexels.com;
+      font-src 'self' data: *.chefito.xyz;
+      connect-src 'self' *.chefito.xyz wss: https:;
+      media-src 'self' *.chefito.xyz;
+      frame-src 'self' *.chefito.xyz;
+    """
+
+# =============================================================================
+# FONCTIONS NETLIFY
+# =============================================================================
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Configuration spécifique par environnement
+[context.production.environment]
+  NODE_ENV = "production"
+  NEXT_PUBLIC_ENVIRONMENT = "production"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "preview"
+  NEXT_PUBLIC_ENVIRONMENT = "preview"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "development"
+  NEXT_PUBLIC_ENVIRONMENT = "development"

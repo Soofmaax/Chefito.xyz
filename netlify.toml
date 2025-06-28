@@ -18,22 +18,46 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Redirections pour les sous-domaines
+[[redirects]]
+  from = "/app/*"
+  to = "https://app.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://admin.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.chefito.xyz/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/docs/*"
+  to = "https://docs.chefito.xyz/:splat"
+  status = 301
+
 # Headers de sécurité
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
+    X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
+    Content-Security-Policy = "default-src 'self' *.chefito.xyz; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.chefito.xyz; style-src 'self' 'unsafe-inline' *.chefito.xyz; img-src 'self' data: https: *.chefito.xyz *.pexels.com; font-src 'self' data: *.chefito.xyz; connect-src 'self' *.chefito.xyz wss: https:; media-src 'self' *.chefito.xyz; frame-src 'self' *.chefito.xyz;"
 
 # CORS pour les API
 [[headers]]
   for = "/api/*"
   [headers.values]
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin = "https://chefito.xyz, https://app.chefito.xyz, https://admin.chefito.xyz"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Allow-Credentials = "true"
 
 # CORS pour les webhooks
 [[headers]]
@@ -43,9 +67,37 @@
     Access-Control-Allow-Methods = "POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
+# Cache pour les assets statiques
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Configuration PWA
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 # Variables d'environnement à configurer dans le dashboard Netlify
 # NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -59,3 +111,8 @@
 # POSTGRES_PASSWORD=your_password
 # ELEVENLABS_API_KEY=your_elevenlabs_api_key
 # NEXT_PUBLIC_REVENUECAT_API_KEY=your_revenuecat_public_api_key
+# NEXT_PUBLIC_APP_URL=https://app.chefito.xyz
+# NEXT_PUBLIC_API_URL=https://api.chefito.xyz
+# NEXT_PUBLIC_CDN_URL=https://cdn.chefito.xyz
+# NEXT_PUBLIC_VOICE_URL=https://voice.chefito.xyz
+# NEXT_PUBLIC_AI_URL=https://ai.chefito.xyz

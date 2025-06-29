@@ -1,11 +1,14 @@
-// ElevenLabs TTS function for Netlify
-exports.handler = async (event, context) => {
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+// Text-to-Speech function for Netlify
+const https = require('https');
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+exports.handler = async (event, context) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -36,37 +39,14 @@ exports.handler = async (event, context) => {
         headers: corsHeaders,
         body: JSON.stringify({ 
           error: 'TTS service not configured',
-          message: 'ElevenLabs API key not found. Voice guidance will use browser fallback.',
+          message: 'Voice guidance will use browser fallback.',
           fallback: true
         }),
       };
     }
 
-    // ElevenLabs API call
-    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM', {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text,
-        model_id: 'eleven_monolingual_v1',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-          style: 0.0,
-          use_speaker_boost: true,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.statusText}`);
-    }
-
-    const audioBuffer = await response.arrayBuffer();
+    // Call ElevenLabs API
+    const response = await callElevenLabsAPI(text, apiKey);
     
     return {
       statusCode: 200,
@@ -75,7 +55,7 @@ exports.handler = async (event, context) => {
         'Content-Type': 'audio/mpeg',
         'Cache-Control': 'public, max-age=3600',
       },
-      body: Buffer.from(audioBuffer).toString('base64'),
+      body: response.toString('base64'),
       isBase64Encoded: true,
     };
   } catch (error) {
@@ -92,3 +72,47 @@ exports.handler = async (event, context) => {
     };
   }
 };
+
+// Function to call ElevenLabs API
+async function callElevenLabsAPI(text, apiKey) {
+  const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Default voice ID
+  
+  const requestData = JSON.stringify({
+    text,
+    model_id: 'eleven_monolingual_v1',
+    voice_settings: {
+      stability: 0.5,
+      similarity_boost: 0.5,
+      style: 0.0,
+      use_speaker_boost: true,
+    },
+  });
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.elevenlabs.io',
+      path: `/v1/text-to-speech/${voiceId}`,
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+        'Content-Length': Buffer.byteLength(requestData),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      if (res.statusCode !== 200) {
+        return reject(new Error(`ElevenLabs API error: ${res.statusCode} ${res.statusMessage}`));
+      }
+
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+
+    req.on('error', reject);
+    req.write(requestData);
+    req.end();
+  });
+}

@@ -1,19 +1,17 @@
-// Netlify function for AI cooking assistant
+// AI Cooking Assistant function for Netlify
 const { Pool } = require('pg');
+const https = require('https');
 
-// PostgreSQL connection to your VPS
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  host: process.env.POSTGRES_HOST,
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB,
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+// PostgreSQL connection
+let pool;
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+} catch (error) {
+  console.error('Error initializing database pool:', error);
+}
 
 // CORS headers
 const corsHeaders = {
@@ -32,19 +30,23 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ success: false, error: 'Method not allowed' }),
-    };
-  }
-
   try {
+    // Check if database is configured
+    if (!pool) {
+      return {
+        statusCode: 503,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          success: false, 
+          error: 'Database not configured' 
+        }),
+      };
+    }
+
     const body = JSON.parse(event.body);
     const { recipeId, stepNumber, question } = body;
 
+    // Validation
     if (!recipeId || stepNumber === undefined || !question) {
       return {
         statusCode: 400,
@@ -64,40 +66,11 @@ exports.handler = async (event, context) => {
     try {
       // Fetch recipe from database
       const recipeQuery = `
-        SELECT 
-          r.*,
-          COALESCE(
-            json_agg(
-              DISTINCT jsonb_build_object(
-                'name', i.name,
-                'amount', i.amount,
-                'unit', i.unit,
-                'optional', i.optional,
-                'order_index', i.order_index
-              ) ORDER BY i.order_index
-            ) FILTER (WHERE i.id IS NOT NULL), 
-            '[]'
-          ) as ingredients,
-          COALESCE(
-            json_agg(
-              DISTINCT jsonb_build_object(
-                'step_number', inst.step_number,
-                'description', inst.description,
-                'duration', inst.duration,
-                'title', inst.title
-              ) ORDER BY inst.step_number
-            ) FILTER (WHERE inst.id IS NOT NULL), 
-            '[]'
-          ) as steps
-        FROM recipes r
-        LEFT JOIN ingredients i ON r.id = i.recipe_id
-        LEFT JOIN instructions inst ON r.id = inst.recipe_id
-        WHERE r.id = $1 AND r.is_public = true
-        GROUP BY r.id
+        SELECT * FROM recipes WHERE id = $1 AND is_public = true
       `;
-
+      
       const result = await pool.query(recipeQuery, [recipeId]);
-
+      
       if (result.rows.length === 0) {
         return {
           statusCode: 404,
@@ -108,14 +81,33 @@ exports.handler = async (event, context) => {
           }),
         };
       }
-
+      
       recipe = result.rows[0];
-      ingredients = Array.isArray(recipe.ingredients) 
-        ? recipe.ingredients.map((ing) => `${ing.amount || ''} ${ing.unit || ''} ${ing.name}`.trim())
-        : [];
-      steps = Array.isArray(recipe.steps) 
-        ? recipe.steps.map((step) => step.description) 
-        : [];
+      
+      // Get ingredients
+      const ingredientsQuery = `
+        SELECT name, amount, unit, optional, order_index
+        FROM ingredients
+        WHERE recipe_id = $1
+        ORDER BY order_index
+      `;
+      
+      const ingredientsResult = await pool.query(ingredientsQuery, [recipeId]);
+      ingredients = ingredientsResult.rows.map(ing => 
+        `${ing.amount || ''} ${ing.unit || ''} ${ing.name}`.trim()
+      );
+      
+      // Get instructions
+      const instructionsQuery = `
+        SELECT step_number, description, duration, title
+        FROM instructions
+        WHERE recipe_id = $1
+        ORDER BY step_number
+      `;
+      
+      const instructionsResult = await pool.query(instructionsQuery, [recipeId]);
+      steps = instructionsResult.rows.map(step => step.description);
+      
     } catch (dbError) {
       console.error('Database error:', dbError);
       
@@ -125,6 +117,9 @@ exports.handler = async (event, context) => {
         title: 'Perfect Scrambled Eggs',
         description: 'Learn the fundamentals of cooking with this beginner-friendly scrambled eggs recipe.',
         difficulty: 'beginner',
+        prep_time: 5,
+        cook_time: 5,
+        servings: 1,
       };
       ingredients = [
         '3 large eggs', 
@@ -147,90 +142,139 @@ exports.handler = async (event, context) => {
     // Get the current step
     const currentStep = steps[stepNumber - 1] || 'Unknown step';
     
-    // Common cooking tools
-    const commonTools = [
-      'knife', 'cutting board', 'spatula', 'whisk', 'bowl', 'pan', 'pot', 
-      'measuring cup', 'measuring spoon', 'wooden spoon', 'tongs'
-    ];
-
     // Build the prompt for Ollama
-    const prompt = `
-You are Chefito, a smart cooking assistant.
-You only answer based on the following context:
+    const prompt = buildChefIAPrompt(recipe, currentStep, stepNumber, steps.length, ingredients, question);
 
-Recipe: ${recipe.title}
-Step ${stepNumber}/${steps.length}: ${currentStep}
-Ingredients: ${ingredients.join(', ')}
-Tools: ${commonTools.join(', ')}
-Difficulty level: ${recipe.difficulty}
+    // Generate AI response
+    const aiResponse = await generateAIResponse(prompt);
 
-User question: "${question}"
-
-Respond in a friendly, helpful tone. Keep your answer concise (under 150 words) and focused on the specific question.
-If the question is not related to cooking or this recipe, politely redirect the user to ask about cooking.
-`;
-
-    // Call Ollama API
-    try {
-      const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama3:8b-instruct-q4_K_M',
-          prompt: prompt,
-          stream: false
-        }),
-      });
-
-      if (!ollamaResponse.ok) {
-        throw new Error(`Ollama API error: ${ollamaResponse.statusText}`);
-      }
-
-      const data = await ollamaResponse.json();
-      
-      return {
-        statusCode: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          answer: data.response,
-        }),
-      };
-    } catch (ollamaError) {
-      console.error('Error calling Ollama API:', ollamaError);
-      
-      // Fallback response if Ollama is not available
-      return {
-        statusCode: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          answer: `Je suis désolé, j'ai du mal à me connecter à mon cerveau culinaire en ce moment. Pour votre question sur "${question}" concernant ${recipe.title}, je vous recommande de vérifier attentivement les instructions de la recette ou de faire une recherche rapide sur internet pour obtenir des conseils de cuisine spécifiques.`,
-          error: ollamaError.message,
-        }),
-      };
-    }
-  } catch (error) {
-    console.error('Error in chef-ia function:', error);
-    
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        success: true,
+        data: {
+          question,
+          answer: aiResponse,
+          context: {
+            recipeTitle: recipe.title,
+            currentStep: stepNumber,
+            totalSteps: steps.length,
+            stepDescription: currentStep,
+          },
+        },
+      }),
+    };
+  } catch (error) {
+    console.error('Error in chef-ia function:', error);
+    
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
         success: false,
-        error: error.message || 'Failed to process your question',
+        error: error.message || 'Internal server error',
+        fallback: "I'm sorry, I can't answer your question at the moment. Please check the written recipe instructions.",
       }),
     };
   }
 };
+
+function buildChefIAPrompt(recipe, currentStep, stepNumber, totalSteps, ingredients, question) {
+  return `You are Chefito, an intelligent and supportive culinary assistant specialized in helping beginners in the kitchen.
+
+RECIPE CONTEXT:
+Recipe: ${recipe.title}
+Total time: ${recipe.prep_time + recipe.cook_time} minutes
+Servings: ${recipe.servings}
+Difficulty: ${recipe.difficulty}
+
+INGREDIENTS:
+${ingredients.join('\n')}
+
+CURRENT STEP:
+Step ${stepNumber} of ${totalSteps}: ${currentStep}
+
+USER QUESTION:
+"${question}"
+
+INSTRUCTIONS:
+- Answer only based on the context of this recipe and this step
+- Be precise, encouraging and educational
+- If the question is not about this step or recipe, politely redirect to the instructions
+- Give practical tips and beginner advice
+- Use a friendly and reassuring tone
+- Limit your response to 150 words maximum
+- If you cannot answer with certainty, clearly say so
+
+Now answer the user's question:`;
+}
+
+async function generateAIResponse(prompt) {
+  const ollamaEndpoint = process.env.OLLAMA_ENDPOINT;
+  const ollamaModel = process.env.OLLAMA_MODEL || 'llama3:8b-instruct-q4_K_M';
+  
+  if (!ollamaEndpoint) {
+    return "I'm sorry, I can't answer your question at the moment. Please check the written recipe instructions or try again in a few moments.";
+  }
+  
+  try {
+    // Extract hostname and path from endpoint
+    const url = new URL(ollamaEndpoint);
+    
+    const requestData = JSON.stringify({
+      model: ollamaModel,
+      prompt: prompt,
+      stream: false,
+      options: {
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 200,
+      },
+    });
+    
+    const response = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(requestData),
+        },
+      };
+      
+      const req = (url.protocol === 'https:' ? https : require('http')).request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Ollama API error: ${res.statusCode}`));
+          }
+          resolve(data);
+        });
+      });
+      
+      req.on('error', reject);
+      req.write(requestData);
+      req.end();
+    });
+    
+    const data = JSON.parse(response);
+    
+    if (!data.response) {
+      throw new Error('Empty response from Ollama API');
+    }
+    
+    return data.response.trim();
+  } catch (error) {
+    console.error('Error calling Ollama API:', error);
+    return "I'm sorry, I can't answer your question at the moment. Please check the written recipe instructions or try again in a few moments.";
+  }
+}

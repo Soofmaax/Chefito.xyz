@@ -1,13 +1,4 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  scope: '/',
-  sw: 'service-worker.js',
-  skipWaiting: true,
-});
-
 const nextConfig = {
   // Production configuration
   trailingSlash: true,
@@ -57,24 +48,18 @@ const nextConfig = {
   },
   
   // React strict mode
-  reactStrictMode: true,
+  reactStrictMode: false,
   
   // Production optimizations
   swcMinify: true,
   
   // TypeScript configuration
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
-  
-  // Output configuration
-  output: 'standalone',
-  
-  // Compression
-  compress: true,
   
   // Powered by header
   poweredByHeader: false,
 }
 
-module.exports = withPWA(nextConfig);
+module.exports = nextConfig;

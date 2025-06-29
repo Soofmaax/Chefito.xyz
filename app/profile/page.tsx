@@ -14,24 +14,25 @@ import { SKILL_LEVELS, DIETARY_RESTRICTIONS } from '@/constants';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    recipesCompleted: 0,
+    favoriteRecipes: 0,
+    cookingHours: 0,
+    memberSince: ''
+  });
+  const [recentActivity, setRecentActivity] = useState<{action: string, time: string}[]>([]);
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     skillLevel: 'beginner',
     dietaryRestrictions: [] as string[],
   });
-  const [stats, setStats] = useState({
-    recipesCompleted: 0,
-    favoriteRecipes: 0,
-    cookingHours: 0,
-    memberSince: '',
-  });
-  const [recentActivity, setRecentActivity] = useState<{action: string, time: string}[]>([]);
 
-  // Load user data when component mounts
+  // Load user data when available
   useEffect(() => {
     if (user) {
       setFormData({
@@ -42,130 +43,96 @@ export default function ProfilePage() {
       });
       
       // Format member since date
-      const memberSince = user.created_at 
-        ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
-        : 'January 2025';
-        
-      // Load user stats from database
-      loadUserStats(user.id);
+      if (user.created_at) {
+        const date = new Date(user.created_at);
+        const formattedDate = date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long'
+        });
+        setStats(prev => ({
+          ...prev,
+          memberSince: formattedDate
+        }));
+      }
       
-      setStats(prev => ({
-        ...prev,
-        memberSince
-      }));
+      // Load user stats
+      loadUserStats();
     }
   }, [user]);
 
-  const loadUserStats = async (userId: string) => {
+  const loadUserStats = async () => {
+    if (!user?.id) return;
+    
     try {
       // Get completed recipes count
-      const { data: completedRecipes, error: completedError } = await supabase
+      const { data: completedSessions, error: sessionsError } = await supabase
         .from('cooking_sessions')
-        .select('id')
-        .eq('user_id', userId)
+        .select('count')
+        .eq('user_id', user.id)
         .eq('status', 'completed');
-        
-      if (!completedError) {
-        setStats(prev => ({
-          ...prev,
-          recipesCompleted: completedRecipes?.length || 0
-        }));
-      }
       
-      // Get favorite recipes count
+      // Get favorites count
       const { data: favorites, error: favoritesError } = await supabase
         .from('favorites')
-        .select('id')
-        .eq('user_id', userId);
-        
-      if (!favoritesError) {
-        setStats(prev => ({
-          ...prev,
-          favoriteRecipes: favorites?.length || 0
-        }));
-      }
+        .select('count')
+        .eq('user_id', user.id);
       
       // Get recent activity
       const { data: activity, error: activityError } = await supabase
         .from('cooking_sessions')
         .select('recipe_id, status, created_at')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(3);
-        
-      if (!activityError && activity) {
-        // Get recipe names
-        const recipeIds = activity.map(item => item.recipe_id);
-        const { data: recipes } = await supabase
-          .from('recipes')
-          .select('id, title')
-          .in('id', recipeIds);
-          
-        const recipeMap = recipes ? recipes.reduce((map, recipe) => {
-          map[recipe.id] = recipe.title;
-          return map;
-        }, {} as Record<string, string>) : {};
-        
-        const formattedActivity = activity.map(item => {
-          const recipeTitle = recipeMap[item.recipe_id] || 'Unknown Recipe';
-          const action = item.status === 'completed' 
-            ? `Completed ${recipeTitle}` 
-            : item.status === 'in_progress'
-              ? `Started ${recipeTitle}`
-              : `Viewed ${recipeTitle}`;
-              
-          const time = formatTimeAgo(new Date(item.created_at));
-          
-          return { action, time };
-        });
-        
-        setRecentActivity(formattedActivity);
-      }
       
-      // Calculate total cooking hours (estimate based on completed recipes)
-      if (completedRecipes) {
-        const cookingHours = completedRecipes.length * 2; // Estimate 2 hours per recipe
+      if (!sessionsError && completedSessions) {
         setStats(prev => ({
           ...prev,
-          cookingHours
+          recipesCompleted: parseInt(completedSessions[0]?.count || '0')
         }));
       }
-    } catch (error) {
-      // Fallback to demo data if error
-      setStats({
-        recipesCompleted: 12,
-        favoriteRecipes: 8,
-        cookingHours: 24,
-        memberSince: user?.created_at 
-          ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
-          : 'January 2025',
-      });
       
-      setRecentActivity([
-        { action: 'Completed Perfect Scrambled Eggs', time: '2 hours ago' },
-        { action: 'Favorited Simple Pasta with Garlic Oil', time: '1 day ago' },
-        { action: 'Started Basic Vegetable Stir-Fry', time: '3 days ago' },
-      ]);
+      if (!favoritesError && favorites) {
+        setStats(prev => ({
+          ...prev,
+          favoriteRecipes: parseInt(favorites[0]?.count || '0')
+        }));
+      }
+      
+      if (!activityError && activity) {
+        // Get recipe details for each activity
+        const recentActivityWithDetails = await Promise.all(
+          activity.map(async (item) => {
+            const { data: recipe } = await supabase
+              .from('recipes')
+              .select('title')
+              .eq('id', item.recipe_id)
+              .single();
+            
+            const action = `${item.status === 'completed' ? 'Completed' : 'Started'} ${recipe?.title || 'Unknown Recipe'}`;
+            const time = formatTimeAgo(new Date(item.created_at));
+            
+            return { action, time };
+          })
+        );
+        
+        setRecentActivity(recentActivityWithDetails);
+      }
+    } catch (error) {
+      // Silently handle errors
     }
   };
-
+  
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    if (diffDay > 0) {
-      return diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
-    } else if (diffHour > 0) {
-      return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
-    } else if (diffMin > 0) {
-      return diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`;
-    } else {
-      return 'just now';
-    }
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    
+    return date.toLocaleDateString();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -192,7 +159,7 @@ export default function ProfilePage() {
       await updateProfile({
         full_name: formData.fullName,
         skill_level: formData.skillLevel as any,
-        dietary_restrictions: formData.dietaryRestrictions,
+        dietary_restrictions: formData.dietaryRestrictions
       });
       
       showToast({
@@ -200,16 +167,29 @@ export default function ProfilePage() {
         title: 'Profile Updated',
         message: 'Your profile has been successfully updated',
       });
-    } catch (error) {
+    } catch (error: any) {
       showToast({
         type: 'error',
         title: 'Update Failed',
-        message: 'Failed to update profile. Please try again.',
+        message: error.message || 'Failed to update profile'
       });
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <BoltBadge />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -246,6 +226,7 @@ export default function ProfilePage() {
                     value={formData.email}
                     onChange={handleChange}
                     disabled
+                    helperText="Email cannot be changed"
                   />
                 </div>
                 
@@ -337,7 +318,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Member Since</span>
-                  <span className="font-bold">{stats.memberSince}</span>
+                  <span className="font-bold">{stats.memberSince || 'New Member'}</span>
                 </div>
               </div>
             </Card>

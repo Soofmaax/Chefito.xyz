@@ -8,7 +8,7 @@ export const SUPER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 export interface AdminUser {
   id: string;
   email: string;
-  role: 'super_admin' | 'user';
+  role: 'super_admin' | 'admin' | 'user';
   permissions: string[];
 }
 
@@ -29,6 +29,20 @@ export const checkAdminPermissions = (user: any): AdminUser | null => {
         'users:write',
         'users:delete',
         'admin:full_access'
+      ]
+    };
+  }
+  
+  // Check if user has admin role in their profile
+  if (user.role === 'admin') {
+    return {
+      id: user.id,
+      email: user.email,
+      role: 'admin',
+      permissions: [
+        'recipes:read',
+        'recipes:write',
+        'users:read'
       ]
     };
   }

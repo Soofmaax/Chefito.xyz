@@ -1,22 +1,22 @@
 'use client';
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
 import { Button } from './Button';
 import { Card } from './Card';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
-  errorInfo?: ErrorInfo;
+  errorInfo?: React.ErrorInfo;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -26,14 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    this.setState({ errorInfo });
-    
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log to error reporting service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
       // Example: Sentry.captureException(error, { contexts: { errorInfo } });
     }
+    this.setState({ errorInfo });
   }
 
   render() {
@@ -55,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
               We're sorry, but something unexpected happened. Our team has been notified and is working on a fix.
             </p>
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="text-left mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
                 <summary className="cursor-pointer font-medium text-red-800 mb-2">
                   Error Details (Development Mode)

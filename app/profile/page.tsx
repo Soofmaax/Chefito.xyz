@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Settings, Heart, Clock, ChefHat, Award } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -11,17 +11,108 @@ import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SKILL_LEVELS, DIETARY_RESTRICTIONS } from '@/constants';
+import { Loading } from '@/components/ui/Loading';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateProfile, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: user?.full_name || 'Demo User',
-    email: user?.email || 'demo@chefito.xyz',
-    skillLevel: user?.skill_level || 'beginner',
-    dietaryRestrictions: user?.dietary_restrictions || [],
+  const [stats, setStats] = useState({
+    recipesCompleted: 0,
+    favoriteRecipes: 0,
+    cookingHours: 0,
+    memberSince: '',
   });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    skillLevel: 'beginner',
+    dietaryRestrictions: [],
+  });
+
+  // Load user data when component mounts
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.full_name || '',
+        email: user.email || '',
+        skillLevel: user.skill_level || 'beginner',
+        dietaryRestrictions: user.dietary_restrictions || [],
+      });
+      
+      // Format the created_at date for display
+      if (user.created_at) {
+        const memberSince = new Date(user.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+        });
+        setStats(prev => ({ ...prev, memberSince }));
+      }
+      
+      // Load user stats from database
+      loadUserStats();
+    }
+  }, [user]);
+
+  const loadUserStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get favorite recipes count
+      const { data: favorites, error: favError } = await supabase
+        .from('favorites')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+      
+      if (!favError) {
+        setStats(prev => ({ ...prev, favoriteRecipes: favorites?.length || 0 }));
+      }
+      
+      // Get completed cooking sessions
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('cooking_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'completed');
+      
+      if (!sessionsError) {
+        setStats(prev => ({ 
+          ...prev, 
+          recipesCompleted: sessions?.length || 0,
+          cookingHours: sessions?.reduce((total, session) => {
+            const start = new Date(session.started_at);
+            const end = new Date(session.completed_at);
+            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            return total + hours;
+          }, 0).toFixed(0) || 0
+        }));
+      }
+      
+      // Get recent activity
+      const { data: activity, error: activityError } = await supabase
+        .from('cooking_sessions')
+        .select('*, recipes(title)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (!activityError && activity) {
+        setRecentActivity(activity.map(item => ({
+          action: `${item.status === 'completed' ? 'Completed' : 'Started'} ${item.recipes?.title || 'a recipe'}`,
+          time: new Date(item.created_at).toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -43,30 +134,41 @@ export default function ProfilePage() {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    showToast({
-      type: 'success',
-      title: 'Profile Updated',
-      message: 'Your profile has been successfully updated',
-    });
-    setLoading(false);
+    try {
+      await updateProfile({
+        full_name: formData.fullName,
+        skill_level: formData.skillLevel as any,
+        dietary_restrictions: formData.dietaryRestrictions,
+      });
+      
+      showToast({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Your profile has been successfully updated',
+      });
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update profile. Please try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock stats for demo
-  const stats = {
-    recipesCompleted: 12,
-    favoriteRecipes: 8,
-    cookingHours: 24,
-    memberSince: 'January 2025',
-  };
-
-  const recentActivity = [
-    { action: 'Completed Perfect Scrambled Eggs', time: '2 hours ago' },
-    { action: 'Favorited Simple Pasta with Garlic Oil', time: '1 day ago' },
-    { action: 'Started Basic Vegetable Stir-Fry', time: '3 days ago' },
-  ];
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <BoltBadge />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+          <Loading size="lg" text="Loading profile..." />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,6 +204,8 @@ export default function ProfilePage() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    disabled
+                    helperText="Email cannot be changed"
                   />
                 </div>
                 
@@ -155,7 +259,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <Button>
+                <Button onClick={handleSubmit} loading={loading}>
                   Update Preferences
                 </Button>
               </div>
@@ -201,12 +305,16 @@ export default function ProfilePage() {
             <Card>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
               <div className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="text-sm">
-                    <p className="font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-gray-500">{activity.time}</p>
-                  </div>
-                ))}
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity: any, index) => (
+                    <div key={index} className="text-sm">
+                      <p className="font-medium text-gray-900">{activity.action}</p>
+                      <p className="text-gray-500">{activity.time}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No recent activity</p>
+                )}
               </div>
             </Card>
 

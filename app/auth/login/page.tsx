@@ -39,15 +39,9 @@ export default function LoginPage() {
       const success = await signInAsAdmin(email, password);
       
       if (success) {
-        // Redirect based on account type
-        if (email === process.env.ADMIN_EMAIL) {
-          router.push('/admin');
-        } else {
-          router.push('/profile');
-        }
+        router.push('/profile');
       }
     } catch (error) {
-      console.error('Login error:', error);
       showToast({
         type: 'error',
         title: 'Login Failed',

@@ -14,13 +14,13 @@ export const metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://chefito.netlify.app',
+    url: 'https://chefito.xyz',
     title: 'Chefito - Smart Cooking Assistant Platform',
     description: 'Your beginner-friendly cooking companion with interactive recipes and voice guidance',
     siteName: 'Chefito',
     images: [
       {
-        url: 'https://chefito.netlify.app/og-image.jpg',
+        url: 'https://chefito.xyz/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'Chefito - Smart Cooking Assistant Platform',
@@ -31,11 +31,11 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Chefito - Smart Cooking Assistant Platform',
     description: 'Your beginner-friendly cooking companion with interactive recipes and voice guidance',
-    images: ['https://chefito.netlify.app/og-image.jpg'],
+    images: ['https://chefito.xyz/og-image.jpg'],
     creator: '@soofmaax',
   },
   verification: {
-    google: 'your-google-verification-code',
+    google: null,
   },
   alternates: {
     canonical: 'https://chefito.xyz',

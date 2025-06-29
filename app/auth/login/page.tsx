@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Crown } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { BoltBadge } from '@/components/layout/BoltBadge';
@@ -40,14 +40,19 @@ export default function LoginPage() {
       
       if (success) {
         // Redirect based on account type
-        if (email === 'contact@chefito.xyz') {
+        if (email === process.env.ADMIN_EMAIL) {
           router.push('/admin');
         } else {
           router.push('/profile');
         }
       }
     } catch (error) {
-      // Error is already handled in useAdminAuth
+      console.error('Login error:', error);
+      showToast({
+        type: 'error',
+        title: 'Login Failed',
+        message: 'Please check your credentials and try again',
+      });
     } finally {
       setLoading(false);
     }
@@ -63,19 +68,6 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h1>
             <p className="text-gray-600">Access your Chefito account</p>
-          </div>
-
-          {/* Admin Access Info - NO EMAIL SHOWN */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg">
-            <div className="flex items-center space-x-2 mb-2">
-              <Crown className="w-5 h-5 text-orange-600" />
-              <span className="font-semibold text-orange-800">Access Levels</span>
-            </div>
-            <p className="text-orange-700 text-sm">
-              <strong>Super Admin:</strong> Full platform access and management
-              <br />
-              <strong>Users:</strong> Personal profile access only
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

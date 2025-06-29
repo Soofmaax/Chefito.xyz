@@ -1,6 +1,10 @@
-// Middleware d'authentification admin
-export const SUPER_ADMIN_EMAIL = 'contact@chefito.xyz';
-export const SUPER_ADMIN_PASSWORD = 'S67JgXOcmZCxQw3I';
+// Middleware for admin authentication
+import { User } from '@/types';
+
+// In production, these values should be stored in environment variables
+// and accessed via process.env.ADMIN_EMAIL and process.env.ADMIN_PASSWORD
+export const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@chefito.xyz';
+export const SUPER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'secure_password_here';
 
 export interface AdminUser {
   id: string;
@@ -12,7 +16,7 @@ export interface AdminUser {
 export const checkAdminPermissions = (user: any): AdminUser | null => {
   if (!user) return null;
   
-  // Super admin avec tous les droits
+  // Super admin with all rights
   if (user.email === SUPER_ADMIN_EMAIL) {
     return {
       id: user.id || 'super-admin',
@@ -30,7 +34,7 @@ export const checkAdminPermissions = (user: any): AdminUser | null => {
     };
   }
   
-  // Utilisateurs normaux - lecture seule de leurs propres données
+  // Regular users - read-only access to their own data
   return {
     id: user.id,
     email: user.email,
@@ -38,7 +42,7 @@ export const checkAdminPermissions = (user: any): AdminUser | null => {
     permissions: [
       'profile:read',
       'profile:write',
-      'recipes:read' // Lecture seule des recettes
+      'recipes:read' // Read-only access to recipes
     ]
   };
 };

@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { signInAsAdmin } = useAdminAuth();
   const { showToast } = useToast();
   const router = useRouter();

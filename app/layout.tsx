@@ -6,7 +6,7 @@ import { CookieBanner } from '@/components/ui/CookieBanner';
 export const metadata = {
   title: 'Chefito - Smart Cooking Assistant Platform',
   description: 'Smart Cooking Assistant Platform - Your beginner-friendly cooking companion with interactive recipes and voice guidance. Created for World\'s Largest Hackathon by Bolt.',
-  keywords: 'cooking, recipes, voice guidance, AI, beginner-friendly, cooking assistant, smart kitchen, culinary education',
+  keywords: 'cooking, recipes, voice guidance, AI, beginner-friendly, hackathon, bolt.new, cooking assistant, smart kitchen, culinary education',
   authors: [{ name: 'Salwa Essafi', url: 'https://www.linkedin.com/in/salwaessafi' }],
   creator: 'Salwa Essafi',
   publisher: 'Chefito',
@@ -36,8 +36,6 @@ export const metadata = {
   },
   verification: {
     google: 'google-site-verification-code',
-    yandex: 'yandex-verification-code',
-    bing: 'bing-verification-code',
   },
   alternates: {
     canonical: 'https://chefito.xyz',
@@ -72,7 +70,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Preconnect to Google Fonts for better performance and reliability */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         
@@ -84,10 +81,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         
-        {/* Permissions Policy */}
         <meta httpEquiv="Permissions-Policy" content="microphone=self, camera=self, geolocation=self" />
         
-        {/* Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

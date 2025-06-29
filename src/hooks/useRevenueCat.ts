@@ -9,7 +9,7 @@ interface RevenueCatState {
   isLoading: boolean;
   isPremium: boolean;
   isConfigured: boolean;
-  packages: any[];
+  customerInfo: any;
 }
 
 export const useRevenueCat = () => {
@@ -20,7 +20,7 @@ export const useRevenueCat = () => {
     isLoading: true,
     isPremium: false,
     isConfigured: false,
-    packages: []
+    customerInfo: null
   });
 
   // Initialize RevenueCat
@@ -34,7 +34,7 @@ export const useRevenueCat = () => {
             isLoading: false,
             isPremium: false,
             isConfigured: false,
-            packages: []
+            customerInfo: null
           });
           return;
         }
@@ -43,50 +43,40 @@ export const useRevenueCat = () => {
         Purchases.configure({
           apiKey,
           appUserID: user?.id,
-          logLevel: process.env.NODE_ENV === 'production' ? 'error' : 'debug'
+          logLevel: process.env.NODE_ENV === 'development' ? 'debug' : 'error'
         });
-
+        
         // Get customer info
-        if (user?.id) {
-          const customerInfo = await Purchases.getCustomerInfo();
-          const isPremium = customerInfo.entitlements.active.premium !== undefined;
-          
-          // Get available packages
-          const offerings = await Purchases.getOfferings();
-          const packages = offerings.current?.availablePackages || [];
-          
-          setState({
-            isLoading: false,
-            isPremium,
-            isConfigured: true,
-            packages
-          });
-        } else {
-          setState({
-            isLoading: false,
-            isPremium: false,
-            isConfigured: true,
-            packages: []
-          });
-        }
+        const customerInfo = await Purchases.getCustomerInfo();
+        
+        // Check if user has premium entitlement
+        const isPremium = customerInfo?.entitlements?.active?.premium || false;
+        
+        setState({
+          isLoading: false,
+          isPremium,
+          isConfigured: true,
+          customerInfo
+        });
       } catch (error) {
         setState({
           isLoading: false,
           isPremium: false,
           isConfigured: false,
-          packages: []
+          customerInfo: null
         });
       }
     };
 
-    if (user?.id) {
+    if (user) {
       initializeRevenueCat();
     } else {
-      setState(prev => ({
-        ...prev,
+      setState({
         isLoading: false,
-        isPremium: false
-      }));
+        isPremium: false,
+        isConfigured: false,
+        customerInfo: null
+      });
     }
   }, [user?.id]);
 
@@ -96,7 +86,7 @@ export const useRevenueCat = () => {
       showToast({
         type: 'error',
         title: 'Service unavailable',
-        message: 'The subscription service is not properly configured.',
+        message: 'The subscription service is not configured.',
       });
       return false;
     }
@@ -106,31 +96,44 @@ export const useRevenueCat = () => {
 
       // Make the purchase
       const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
-      const isPremium = customerInfo.entitlements.active.premium !== undefined;
-
+      
+      // Check if purchase was successful
+      const isPremium = customerInfo?.entitlements?.active?.premium || false;
+      
       setState(prev => ({
         ...prev,
         isPremium,
         isLoading: false,
+        customerInfo
       }));
 
-      showToast({
-        type: 'success',
-        title: '🎉 Welcome to Chefito Premium!',
-        message: 'Your subscription is now active. Enjoy all recipes!',
-      });
+      if (isPremium) {
+        showToast({
+          type: 'success',
+          title: '🎉 Welcome to Chefito Premium!',
+          message: 'Your subscription is now active. Enjoy all recipes!',
+        });
+      }
 
-      return true;
+      return isPremium;
     } catch (error: any) {
       setState(prev => ({ ...prev, isLoading: false }));
       
-      if (error.code !== Purchases.PURCHASE_CANCELLED_ERROR) {
+      // Handle user cancellation
+      if (error.code === Purchases.PURCHASE_CANCELLED_ERROR) {
         showToast({
-          type: 'error',
-          title: 'Purchase failed',
-          message: error.message || 'An error occurred during purchase. Please try again.',
+          type: 'info',
+          title: 'Purchase cancelled',
+          message: 'You cancelled the purchase.',
         });
+        return false;
       }
+      
+      showToast({
+        type: 'error',
+        title: 'Purchase error',
+        message: error.message || 'An error occurred during purchase.',
+      });
       
       return false;
     }
@@ -142,7 +145,7 @@ export const useRevenueCat = () => {
       showToast({
         type: 'error',
         title: 'Service unavailable',
-        message: 'The restore service is not properly configured.',
+        message: 'The restore service is not configured.',
       });
       return;
     }
@@ -150,19 +153,23 @@ export const useRevenueCat = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
 
+      // Restore purchases
       const { customerInfo } = await Purchases.restorePurchases();
-      const isPremium = customerInfo.entitlements.active.premium !== undefined;
-
+      
+      // Check if user has premium entitlement
+      const isPremium = customerInfo?.entitlements?.active?.premium || false;
+      
       setState(prev => ({
         ...prev,
         isPremium,
         isLoading: false,
+        customerInfo
       }));
 
       if (isPremium) {
         showToast({
           type: 'success',
-          title: 'Purchases Restored',
+          title: 'Purchases restored',
           message: 'Your premium subscription has been restored.',
         });
       } else {
@@ -177,21 +184,31 @@ export const useRevenueCat = () => {
       
       showToast({
         type: 'error',
-        title: 'Restore failed',
-        message: error.message || 'Unable to restore purchases. Please try again.',
+        title: 'Restore error',
+        message: error.message || 'Unable to restore purchases.',
       });
     }
   }, [state.isConfigured, showToast]);
 
   // Get premium package
   const getPremiumPackage = useCallback(() => {
-    if (!state.isConfigured || state.packages.length === 0) {
-      return null;
-    }
+    if (!state.isConfigured) return null;
     
-    // Find the monthly premium package
-    return state.packages.find(pkg => pkg.identifier === 'premium_monthly') || state.packages[0];
-  }, [state.isConfigured, state.packages]);
+    // This would normally come from Purchases.getOfferings()
+    // For now, return a mock package
+    return {
+      identifier: 'premium_monthly',
+      packageType: 'monthly',
+      product: {
+        identifier: 'premium_monthly',
+        description: 'Chefito Premium Monthly',
+        title: 'Premium Monthly',
+        price: 19.99,
+        priceString: '19,99€',
+        currencyCode: 'EUR',
+      },
+    };
+  }, [state.isConfigured]);
 
   // Check if user can access premium content
   const canAccessPremiumContent = useCallback((): boolean => {

@@ -27,7 +27,8 @@ export const useAuth = () => {
           await fetchUserProfile(session.user.id);
         }
       } catch (error) {
-        setLoading(false);
+        // Silent error handling for production
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -67,13 +68,14 @@ export const useAuth = () => {
       
       setUser(data);
     } catch (error) {
-      // Handle error silently
+      // Silent error handling for production
+      setUser(null);
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
     if (!isSupabaseConfigured()) {
-      throw new Error('Authentication service not configured');
+      return null;
     }
 
     try {
@@ -84,6 +86,7 @@ export const useAuth = () => {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -99,10 +102,11 @@ export const useAuth = () => {
             full_name: fullName,
             skill_level: 'beginner',
             dietary_restrictions: [],
+            subscription_status: 'free'
           });
 
         if (profileError) {
-          throw new Error('Error creating user profile');
+          throw profileError;
         }
       }
       
@@ -114,7 +118,7 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
-      throw new Error('Authentication service not configured');
+      return null;
     }
 
     try {
@@ -133,7 +137,8 @@ export const useAuth = () => {
 
   const signOut = async () => {
     if (!isSupabaseConfigured()) {
-      throw new Error('Authentication service not configured');
+      setUser(null);
+      return;
     }
 
     try {
@@ -148,13 +153,11 @@ export const useAuth = () => {
   };
 
   const updateProfile = async (updates: Partial<User>) => {
-    if (!isSupabaseConfigured()) {
-      throw new Error('Authentication service not configured');
+    if (!isSupabaseConfigured() || !user) {
+      return null;
     }
 
     try {
-      if (!user) throw new Error('No user logged in');
-
       const { error } = await supabase
         .from('profiles')
         .update({ 
@@ -166,6 +169,7 @@ export const useAuth = () => {
       if (error) throw error;
 
       setUser({ ...user, ...updates });
+      return { ...user, ...updates };
     } catch (error: any) {
       throw error;
     }

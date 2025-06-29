@@ -97,14 +97,16 @@ exports.handler = async (event, context) => {
       }),
     };
   } catch (error) {
-    console.error('Webhook error:', error);
+    // Log error but don't expose details in response
+    const errorId = crypto.randomBytes(8).toString('hex');
     
     return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({ 
         success: false, 
-        error: error.message || 'Internal server error'
+        error: 'Internal server error',
+        errorId
       }),
     };
   }

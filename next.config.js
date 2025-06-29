@@ -1,4 +1,13 @@
 /** @type {import('next').NextConfig} */
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  scope: '/',
+  sw: 'service-worker.js',
+  skipWaiting: true,
+});
+
 const nextConfig = {
   // Production configuration
   trailingSlash: true,
@@ -55,10 +64,6 @@ const nextConfig = {
   
   // TypeScript configuration
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
     ignoreBuildErrors: false,
   },
   
@@ -72,4 +77,4 @@ const nextConfig = {
   poweredByHeader: false,
 }
 
-module.exports = nextConfig
+module.exports = withPWA(nextConfig);

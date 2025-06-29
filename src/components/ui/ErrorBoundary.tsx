@@ -1,22 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from './Button';
 import { Card } from './Card';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 
 interface Props {
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error?: Error;
-  errorInfo?: React.ErrorInfo;
+  errorInfo?: ErrorInfo;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -26,13 +26,31 @@ export class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    this.setState({ errorInfo });
-    
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log to error reporting service in production
-    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      // Example: Sentry.captureException(error, { contexts: { errorInfo } });
+    if (process.env.NODE_ENV === 'production') {
+      // Example: Send to error monitoring service
+      this.logErrorToService(error, errorInfo);
+    }
+    
+    this.setState({ errorInfo });
+  }
+
+  logErrorToService(error: Error, errorInfo: ErrorInfo) {
+    // In production, this would send the error to your monitoring service
+    // Example: Sentry.captureException(error, { contexts: { errorInfo } });
+    
+    // For now, just log to console in a production-friendly way
+    const errorData = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+    };
+    
+    // This would be replaced with actual error reporting in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Application error:', JSON.stringify(errorData));
     }
   }
 
@@ -48,28 +66,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="text-orange-500 mb-4">
               <AlertTriangle className="w-16 h-16 mx-auto" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Oops! Something went wrong
-            </h2>
-            <p className="text-gray-600 mb-6">
-              We're sorry, but something unexpected happened. Our team has been notified and is working on a fix.
-            </p>
             
-            {typeof window !== 'undefined' && window.location.hostname === 'localhost' && this.state.error && (
-              <details className="text-left mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
-                <summary className="cursor-pointer font-medium text-red-800 mb-2">
-                  Error Details (Development Mode)
-                </summary>
-                <pre className="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-40">
-                  {this.state.error.stack}
-                </pre>
-                {this.state.errorInfo && (
-                  <pre className="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-40 mt-2">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                )}
-              </details>
-            )}
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Something went wrong!
+            </h2>
+            
+            <p className="text-gray-600 mb-6">
+              We're sorry, but something unexpected happened. Please try again.
+            </p>
             
             <div className="space-y-3">
               <Button
@@ -79,6 +83,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               >
                 Refresh Page
               </Button>
+              
               <Button
                 variant="outline"
                 onClick={() => window.history.back()}

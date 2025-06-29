@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit } from '@/lib/rateLimit';
 
 export async function GET(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
     const { searchParams } = new URL(request.url);
     const text = searchParams.get('text');
     const voiceId = searchParams.get('voice') || 'default';
@@ -60,7 +65,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('TTS Error:', error);
     
     return NextResponse.json(
       { 

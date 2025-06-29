@@ -61,7 +61,6 @@ export const useRevenueCat = () => {
           customerInfo
         });
       } catch (error) {
-        console.error('❌ RevenueCat initialization failed:', error);
         setState({
           isLoading: false,
           isPremium: false,
@@ -119,7 +118,6 @@ export const useRevenueCat = () => {
 
       return isPremium;
     } catch (error: any) {
-      console.error('❌ Purchase failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       
       // Don't show error for user cancellation
@@ -176,7 +174,6 @@ export const useRevenueCat = () => {
         });
       }
     } catch (error: any) {
-      console.error('❌ Restore failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       
       showToast({

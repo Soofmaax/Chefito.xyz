@@ -15,12 +15,10 @@ export const useAuth = () => {
     // Check if Supabase is configured
     if (!isSupabaseConfigured()) {
       // Demo mode - simulate auth
-      console.log('🔧 Running in demo mode - Supabase not configured');
       setLoading(false);
       return;
     }
 
-    console.log('🔐 Supabase Auth configured - initializing...');
 
     // Get initial session
     const getInitialSession = async () => {
@@ -32,7 +30,6 @@ export const useAuth = () => {
           await fetchUserProfile(session.user.id);
         }
       } catch (error) {
-        console.error('Error getting session:', error);
       } finally {
         setLoading(false);
       }
@@ -43,7 +40,6 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔐 Auth state changed:', event);
         setSession(session);
         
         if (session?.user) {
@@ -68,20 +64,17 @@ export const useAuth = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
         return;
       }
       
       setUser(data);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
     if (!isSupabaseConfigured()) {
       // Demo mode
-      console.log('🔧 Demo mode: Simulating sign up');
       const mockUser: User = {
         id: '1',
         email,
@@ -121,11 +114,9 @@ export const useAuth = () => {
           });
 
         if (profileError) {
-          console.error('Error creating profile:', profileError);
         }
       }
     } catch (error: any) {
-      console.error('Sign up error:', error);
       throw error;
     }
   };
@@ -133,7 +124,6 @@ export const useAuth = () => {
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
       // Demo mode - handle admin login specially
-      console.log('🔧 Demo mode: Simulating sign in');
       
       // Check if this is the admin login
       if (email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
@@ -186,7 +176,6 @@ export const useAuth = () => {
       
       return data.user;
     } catch (error: any) {
-      console.error('Sign in error:', error);
       throw error;
     }
   };
@@ -194,7 +183,6 @@ export const useAuth = () => {
   const signOut = async () => {
     if (!isSupabaseConfigured()) {
       // Demo mode
-      console.log('🔧 Demo mode: Simulating sign out');
       setUser(null);
       return;
     }
@@ -206,7 +194,6 @@ export const useAuth = () => {
       setUser(null);
       setSession(null);
     } catch (error: any) {
-      console.error('Sign out error:', error);
       throw error;
     }
   };
@@ -232,7 +219,6 @@ export const useAuth = () => {
 
       setUser({ ...user, ...updates });
     } catch (error: any) {
-      console.error('Profile update error:', error);
       throw error;
     }
   };

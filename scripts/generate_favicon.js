@@ -7,7 +7,6 @@ const path = require('path');
  * a simple SVG-based favicon and copy existing icons
  */
 
-console.log('🎨 Generating favicon and app icons...');
 
 // Create a simple SVG favicon
 const svgFavicon = `
@@ -26,7 +25,6 @@ if (!fs.existsSync(publicDir)) {
 // Write SVG favicon
 const faviconPath = path.join(publicDir, 'favicon.svg');
 fs.writeFileSync(faviconPath, svgFavicon);
-console.log('✅ Created favicon.svg');
 
 // Create a simple HTML favicon fallback
 const htmlFavicon = `
@@ -61,7 +59,6 @@ const faviconIcoPath = path.join(publicDir, 'favicon.ico');
 if (!fs.existsSync(faviconIcoPath)) {
   // Create a simple text file as placeholder since we can't generate ICO in WebContainer
   fs.writeFileSync(faviconIcoPath + '.html', htmlFavicon);
-  console.log('✅ Created favicon.ico.html (placeholder)');
 }
 
 // Ensure icons directory exists
@@ -85,7 +82,6 @@ sizes.forEach(size => {
   fs.writeFileSync(iconPath, svgIcon);
 });
 
-console.log('✅ Created SVG icons for all sizes');
 
 // Create apple-touch-icon
 const appleTouchIcon = `
@@ -97,7 +93,4 @@ const appleTouchIcon = `
 
 const appleTouchIconPath = path.join(publicDir, 'apple-touch-icon.svg');
 fs.writeFileSync(appleTouchIconPath, appleTouchIcon);
-console.log('✅ Created apple-touch-icon.svg');
 
-console.log('🎉 Favicon generation completed!');
-console.log('📝 Note: SVG favicons created. For production, consider converting to ICO/PNG format.');

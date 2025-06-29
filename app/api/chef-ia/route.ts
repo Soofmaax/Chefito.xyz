@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { rateLimit } from '@/lib/rateLimit';
 
 interface ChefIARequest {
   recipeId: string;
@@ -15,6 +16,10 @@ interface OllamaResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
     const body: ChefIARequest = await request.json();
     const { recipeId, stepNumber, question } = body;
 
@@ -119,7 +124,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Erreur Chef IA:', error);
     
     return NextResponse.json(
       {
@@ -204,7 +208,6 @@ async function callOllamaAPI(prompt: string): Promise<string> {
     return data.response.trim();
 
   } catch (error: any) {
-    console.error('Erreur Ollama API:', error);
     
     // Fallback response
     return "Je suis désolé, je ne peux pas répondre à votre question pour le moment. Veuillez consulter les instructions écrites de la recette ou réessayer dans quelques instants.";

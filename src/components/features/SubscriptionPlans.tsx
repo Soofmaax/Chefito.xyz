@@ -107,7 +107,6 @@ export const SubscriptionPlans: React.FC = () => {
     const success = await purchasePackage(premiumPackage);
     
     if (success) {
-      console.log('✅ Premium subscription activated');
     }
   };
 

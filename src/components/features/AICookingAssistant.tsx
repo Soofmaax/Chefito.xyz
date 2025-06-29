@@ -153,7 +153,6 @@ export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
       });
 
     } catch (error: any) {
-      console.error('Erreur Chef IA:', error);
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

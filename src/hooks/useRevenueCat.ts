@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/Toast';
-import * as PurchasesJS from 'purchases-js';
+import Purchases, { CustomerInfo, PurchasesPackage } from 'purchases-js';
 
-// RevenueCat hook with real SDK integration
+// RevenueCat hook for subscription management
 interface RevenueCatState {
   isLoading: boolean;
   isPremium: boolean;
   isConfigured: boolean;
-  customerInfo: any;
+  customerInfo: CustomerInfo | null;
 }
 
 export const useRevenueCat = () => {
@@ -21,7 +21,7 @@ export const useRevenueCat = () => {
     isLoading: true,
     isPremium: false,
     isConfigured: false,
-    customerInfo: null
+    customerInfo: null,
   });
 
   // Initialize RevenueCat
@@ -31,64 +31,63 @@ export const useRevenueCat = () => {
         const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_API_KEY;
         
         if (!apiKey || apiKey === 'your_revenuecat_public_api_key') {
-          console.warn('⚠️ RevenueCat API key not configured. Running in demo mode.');
           setState({
             isLoading: false,
             isPremium: false,
             isConfigured: false,
-            customerInfo: null
+            customerInfo: null,
           });
           return;
         }
 
-        // Initialize RevenueCat SDK
-        PurchasesJS.configure({
+        // Initialize RevenueCat
+        Purchases.configure({
           apiKey,
           appUserID: user?.id,
-          logLevel: process.env.NODE_ENV === 'production' ? 'error' : 'debug'
+          observerMode: false,
         });
-
+        
         // Get customer info
-        const customerInfo = await PurchasesJS.getCustomerInfo();
+        const customerInfo = await Purchases.getCustomerInfo();
         
         // Check if user has premium entitlement
-        const isPremium = customerInfo?.entitlements?.active?.premium || false;
+        const isPremium = customerInfo.entitlements.active.premium !== undefined;
         
         setState({
           isLoading: false,
           isPremium,
           isConfigured: true,
-          customerInfo
+          customerInfo,
         });
       } catch (error) {
-        console.error('❌ RevenueCat initialization failed:', error);
         setState({
           isLoading: false,
           isPremium: false,
           isConfigured: false,
-          customerInfo: null
+          customerInfo: null,
         });
       }
     };
 
-    if (user?.id) {
+    if (user) {
       initializeRevenueCat();
     } else {
-      setState(prev => ({
-        ...prev,
+      setState({
         isLoading: false,
-        isPremium: false
-      }));
+        isPremium: false,
+        isConfigured: false,
+        customerInfo: null,
+      });
     }
   }, [user?.id]);
 
-  // Purchase package
-  const purchasePackage = useCallback(async (packageToPurchase: any) => {
+  // Purchase a package
+  const purchasePackage = useCallback(async (pkg: PurchasesPackage): Promise<boolean> => {
     if (!state.isConfigured) {
       showToast({
         type: 'error',
         title: 'Service unavailable',
-        message: 'The subscription service is not properly configured.',
+        message: 'The subscription service is not configured.',
       });
       return false;
     }
@@ -96,17 +95,17 @@ export const useRevenueCat = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
 
-      // Make purchase through RevenueCat
-      const { customerInfo } = await PurchasesJS.purchasePackage(packageToPurchase);
+      // Make the purchase
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
       
       // Check if purchase was successful
-      const isPremium = customerInfo?.entitlements?.active?.premium || false;
+      const isPremium = customerInfo.entitlements.active.premium !== undefined;
       
       setState(prev => ({
         ...prev,
         isPremium,
         isLoading: false,
-        customerInfo
+        customerInfo,
       }));
 
       if (isPremium) {
@@ -119,15 +118,14 @@ export const useRevenueCat = () => {
 
       return isPremium;
     } catch (error: any) {
-      console.error('❌ Purchase failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       
       // Don't show error for user cancellation
-      if (error.code !== 'cancelled') {
+      if (error.code !== Purchases.ErrorCode.purchaseCancelledError) {
         showToast({
           type: 'error',
-          title: 'Purchase Error',
-          message: error.message || 'An error occurred during purchase. Please try again.',
+          title: 'Purchase failed',
+          message: error.message || 'An error occurred during purchase.',
         });
       }
       
@@ -141,7 +139,7 @@ export const useRevenueCat = () => {
       showToast({
         type: 'error',
         title: 'Service unavailable',
-        message: 'The subscription service is not properly configured.',
+        message: 'The restore service is not configured.',
       });
       return;
     }
@@ -149,17 +147,17 @@ export const useRevenueCat = () => {
     try {
       setState(prev => ({ ...prev, isLoading: true }));
 
-      // Restore purchases through RevenueCat
-      const { customerInfo } = await PurchasesJS.restorePurchases();
+      // Restore purchases
+      const { customerInfo } = await Purchases.restorePurchases();
       
       // Check if user has premium entitlement
-      const isPremium = customerInfo?.entitlements?.active?.premium || false;
+      const isPremium = customerInfo.entitlements.active.premium !== undefined;
       
       setState(prev => ({
         ...prev,
         isPremium,
         isLoading: false,
-        customerInfo
+        customerInfo,
       }));
 
       if (isPremium) {
@@ -171,40 +169,38 @@ export const useRevenueCat = () => {
       } else {
         showToast({
           type: 'info',
-          title: 'No Subscription Found',
+          title: 'No subscription found',
           message: 'No active subscription was found for this account.',
         });
       }
     } catch (error: any) {
-      console.error('❌ Restore failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
       
       showToast({
         type: 'error',
-        title: 'Restore Error',
-        message: error.message || 'Failed to restore purchases. Please try again.',
+        title: 'Restore failed',
+        message: error.message || 'Failed to restore purchases.',
       });
     }
   }, [state.isConfigured, showToast]);
 
   // Get premium package
-  const getPremiumPackage = useCallback(() => {
+  const getPremiumPackage = useCallback(async (): Promise<PurchasesPackage | null> => {
     if (!state.isConfigured) return null;
     
-    // This would normally come from RevenueCat's getOfferings() API
-    // For now, we'll return a mock package
-    return {
-      identifier: 'premium_monthly',
-      packageType: 'monthly',
-      product: {
-        identifier: 'premium_monthly',
-        description: 'Chefito Premium Monthly',
-        title: 'Premium Monthly',
-        price: 19.99,
-        priceString: '19,99€',
-        currencyCode: 'EUR',
-      },
-    };
+    try {
+      // Get available packages
+      const offerings = await Purchases.getOfferings();
+      
+      if (offerings.current?.availablePackages.length) {
+        // Return the first package (monthly subscription)
+        return offerings.current.availablePackages[0];
+      }
+      
+      return null;
+    } catch (error) {
+      return null;
+    }
   }, [state.isConfigured]);
 
   // Check if user can access premium content

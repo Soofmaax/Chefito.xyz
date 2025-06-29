@@ -6,7 +6,7 @@ import { CookieBanner } from '@/components/ui/CookieBanner';
 export const metadata = {
   title: 'Chefito - Smart Cooking Assistant Platform',
   description: 'Smart Cooking Assistant Platform - Your beginner-friendly cooking companion with interactive recipes and voice guidance. Created for World\'s Largest Hackathon by Bolt.',
-  keywords: 'cooking, recipes, voice guidance, AI, beginner-friendly, hackathon, bolt.new, cooking assistant, smart kitchen, culinary education',
+  keywords: 'cooking, recipes, voice guidance, AI, beginner-friendly, cooking assistant, smart kitchen, culinary education',
   authors: [{ name: 'Salwa Essafi', url: 'https://www.linkedin.com/in/salwaessafi' }],
   creator: 'Salwa Essafi',
   publisher: 'Chefito',
@@ -35,7 +35,9 @@ export const metadata = {
     creator: '@soofmaax',
   },
   verification: {
-    google: null,
+    google: 'google-site-verification-code',
+    yandex: 'yandex-verification-code',
+    bing: 'bing-verification-code',
   },
   alternates: {
     canonical: 'https://chefito.xyz',

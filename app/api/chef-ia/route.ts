@@ -1,5 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { createServerSupabaseClient } from '@/lib/supabase';
+
+// Rate limiting implementation
+const RATE_LIMIT = 30; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
+const ipRequestCounts = new Map<string, { count: number, resetTime: number }>();
+
+function getRateLimitInfo(ip: string): { count: number, resetTime: number } {
+  const now = Date.now();
+  let info = ipRequestCounts.get(ip);
+  
+  if (!info || now > info.resetTime) {
+    info = { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+    ipRequestCounts.set(ip, info);
+  }
+  
+  return info;
+}
+
+function isRateLimited(ip: string): boolean {
+  const info = getRateLimitInfo(ip);
+  info.count++;
+  
+  return info.count > RATE_LIMIT;
+}
 
 interface ChefIARequest {
   recipeId: string;
@@ -15,6 +40,27 @@ interface OllamaResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please try again later.',
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+          }
+        }
+      );
+    }
+
+    // Authenticate user
+    const supabase = createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     const body: ChefIARequest = await request.json();
     const { recipeId, stepNumber, question } = body;
 
@@ -23,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Paramètres manquants: recipeId, stepNumber et question sont requis',
+          error: 'Missing parameters: recipeId, stepNumber and question are required',
         },
         { status: 400 }
       );
@@ -33,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Base de données non configurée',
+          error: 'Database not configured',
         },
         { status: 503 }
       );
@@ -79,7 +125,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Recette non trouvée',
+          error: 'Recipe not found',
         },
         { status: 404 }
       );
@@ -92,7 +138,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Étape ${stepNumber} non trouvée pour cette recette`,
+          error: `Step ${stepNumber} not found for this recipe`,
         },
         { status: 404 }
       );
@@ -103,6 +149,20 @@ export async function POST(request: NextRequest) {
 
     // Appeler l'API Ollama
     const aiResponse = await callOllamaAPI(prompt);
+
+    // Log the interaction for analytics
+    if (user) {
+      await supabase.from('ai_interactions').insert({
+        user_id: user.id,
+        recipe_id: recipeId,
+        step_number: stepNumber,
+        question,
+        answer: aiResponse,
+        created_at: new Date().toISOString()
+      }).catch(() => {
+        // Silently fail if logging fails
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -119,13 +179,11 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Erreur Chef IA:', error);
-    
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Erreur interne du serveur',
-        fallback: 'Je suis désolé, je ne peux pas répondre à votre question pour le moment. Veuillez consulter les instructions écrites de la recette.',
+        error: error.message || 'Internal server error',
+        fallback: 'I\'m sorry, I can\'t answer your question at the moment. Please check the written recipe instructions.',
       },
       { status: 500 }
     );
@@ -137,34 +195,34 @@ function buildChefIAPrompt(recipe: any, currentStep: any, stepNumber: number, qu
     `${ing.amount || ''} ${ing.unit || ''} ${ing.name}`.trim()
   ).join('\n');
 
-  const prompt = `Tu es Chefito, un assistant culinaire intelligent et bienveillant spécialisé dans l'aide aux débutants en cuisine.
+  const prompt = `You are Chefito, an intelligent and supportive culinary assistant specialized in helping beginners in the kitchen.
 
-CONTEXTE DE LA RECETTE:
-Recette: ${recipe.title}
-Temps total: ${recipe.prep_time + recipe.cook_time} minutes
-Portions: ${recipe.servings}
-Difficulté: ${recipe.difficulty}
+RECIPE CONTEXT:
+Recipe: ${recipe.title}
+Total time: ${recipe.prep_time + recipe.cook_time} minutes
+Servings: ${recipe.servings}
+Difficulty: ${recipe.difficulty}
 
-INGRÉDIENTS:
+INGREDIENTS:
 ${ingredients}
 
-ÉTAPE ACTUELLE:
-Étape ${stepNumber} sur ${recipe.steps.length}: ${currentStep.description}
-${currentStep.duration ? `Durée estimée: ${currentStep.duration} minutes` : ''}
+CURRENT STEP:
+Step ${stepNumber} of ${recipe.steps.length}: ${currentStep.description}
+${currentStep.duration ? `Estimated duration: ${currentStep.duration} minutes` : ''}
 
-QUESTION DE L'UTILISATEUR:
+USER QUESTION:
 "${question}"
 
 INSTRUCTIONS:
-- Réponds uniquement en te basant sur le contexte de cette recette et de cette étape
-- Sois précis, encourageant et pédagogique
-- Si la question ne concerne pas cette étape ou cette recette, redirige poliment vers les instructions
-- Donne des conseils pratiques et des astuces de débutant
-- Utilise un ton amical et rassurant
-- Limite ta réponse à 150 mots maximum
-- Si tu ne peux pas répondre avec certitude, dis-le clairement
+- Answer only based on the context of this recipe and this step
+- Be precise, encouraging and educational
+- If the question is not about this step or recipe, politely redirect to the instructions
+- Give practical tips and beginner advice
+- Use a friendly and reassuring tone
+- Limit your response to 150 words maximum
+- If you cannot answer with certainty, clearly say so
 
-Réponds maintenant à la question de l'utilisateur:`;
+Now answer the user's question:`;
 
   return prompt;
 }
@@ -198,15 +256,13 @@ async function callOllamaAPI(prompt: string): Promise<string> {
     const data: OllamaResponse = await response.json();
     
     if (!data.response) {
-      throw new Error('Réponse vide de l\'API Ollama');
+      throw new Error('Empty response from Ollama API');
     }
 
     return data.response.trim();
 
   } catch (error: any) {
-    console.error('Erreur Ollama API:', error);
-    
     // Fallback response
-    return "Je suis désolé, je ne peux pas répondre à votre question pour le moment. Veuillez consulter les instructions écrites de la recette ou réessayer dans quelques instants.";
+    return "I'm sorry, I can't answer your question at the moment. Please check the written recipe instructions or try again in a few moments.";
   }
 }

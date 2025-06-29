@@ -39,6 +39,7 @@ export default function LoginPage() {
       const success = await signInAsAdmin(email, password);
       
       if (success) {
+        // Redirect based on account type
         router.push('/profile');
       }
     } catch (error) {

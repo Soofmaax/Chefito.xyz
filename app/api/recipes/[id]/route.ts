@@ -1,11 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { createServerSupabaseClient } from '@/lib/supabase';
+
+// Rate limiting implementation
+const RATE_LIMIT = 60; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
+const ipRequestCounts = new Map<string, { count: number, resetTime: number }>();
+
+function getRateLimitInfo(ip: string): { count: number, resetTime: number } {
+  const now = Date.now();
+  let info = ipRequestCounts.get(ip);
+  
+  if (!info || now > info.resetTime) {
+    info = { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+    ipRequestCounts.set(ip, info);
+  }
+  
+  return info;
+}
+
+function isRateLimited(ip: string): boolean {
+  const info = getRateLimitInfo(ip);
+  info.count++;
+  
+  return info.count > RATE_LIMIT;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please try again later.',
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+          }
+        }
+      );
+    }
+
     if (!isPostgreSQLConfigured()) {
       return NextResponse.json(
         {
@@ -77,8 +119,6 @@ export async function GET(
       data: transformedRecipe,
     });
   } catch (error: any) {
-    console.error('Error fetching recipe:', error);
-    
     return NextResponse.json(
       {
         success: false,
@@ -103,6 +143,33 @@ export async function PUT(
           error: 'Database not configured. Please configure PostgreSQL connection.',
         },
         { status: 503 }
+      );
+    }
+
+    // Authenticate user and check permissions
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Check if user has admin permissions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+      
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+    
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Admin access required' },
+        { status: 403 }
       );
     }
 
@@ -158,8 +225,6 @@ export async function PUT(
       data: result.rows[0],
     });
   } catch (error: any) {
-    console.error('Error updating recipe:', error);
-    
     return NextResponse.json(
       {
         success: false,
@@ -185,6 +250,33 @@ export async function DELETE(
       );
     }
 
+    // Authenticate user and check permissions
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Check if user has admin permissions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+      
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+    
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const result = await query(
       'DELETE FROM recipes WHERE id = $1 AND is_public = true RETURNING id',
       [params.id]
@@ -205,8 +297,6 @@ export async function DELETE(
       message: 'Recipe deleted successfully',
     });
   } catch (error: any) {
-    console.error('Error deleting recipe:', error);
-    
     return NextResponse.json(
       {
         success: false,

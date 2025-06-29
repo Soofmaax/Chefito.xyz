@@ -7,6 +7,10 @@
   "background_color": "#ffffff",
   "theme_color": "#f97316",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["food", "lifestyle", "education"],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -21,7 +25,56 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["food", "lifestyle", "education"],
-  "lang": "en",
-  "dir": "ltr"
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Chefito home page on desktop"
+    },
+    {
+      "src": "/screenshots/mobile-recipe.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Recipe with voice guidance on mobile"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=xyz.chefito.app",
+      "id": "xyz.chefito.app"
+    }
+  ],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Recipes",
+      "short_name": "Recipes",
+      "description": "Browse all recipes",
+      "url": "/recipes",
+      "icons": [
+        {
+          "src": "/icons/recipes-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "description": "View your profile",
+      "url": "/profile",
+      "icons": [
+        {
+          "src": "/icons/profile-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }

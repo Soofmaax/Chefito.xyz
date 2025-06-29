@@ -1,10 +1,9 @@
 // Middleware for admin authentication
 import { User } from '@/types';
 
-// In production, these values should be stored in environment variables
+// Admin credentials should be stored in environment variables
 export const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@chefito.xyz';
-// This is just a placeholder - in production, use a secure environment variable
-export const SUPER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'secure_password_here';
+export const SUPER_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
 export interface AdminUser {
   id: string;

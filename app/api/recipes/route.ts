@@ -1,43 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
-interface RecipeRow {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string;
-  prep_time: number;
-  cook_time: number;
-  servings: number;
-  difficulty: string;
-  category: string;
-  cuisine: string;
-  tags: string[];
-  rating: number;
-  rating_count: number;
-  created_at: string;
-  updated_at: string;
-  ingredients: any[];
-  steps: any[];
+// Rate limiting implementation
+const RATE_LIMIT = 60; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
+const ipRequestCounts = new Map<string, { count: number, resetTime: number }>();
+
+function getRateLimitInfo(ip: string): { count: number, resetTime: number } {
+  const now = Date.now();
+  let info = ipRequestCounts.get(ip);
+  
+  if (!info || now > info.resetTime) {
+    info = { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+    ipRequestCounts.set(ip, info);
+  }
+  
+  return info;
 }
 
-interface IngredientData {
-  name: string;
-  amount?: string;
-  unit?: string;
-  optional?: boolean;
-  order_index: number;
-}
-
-interface StepData {
-  step_number: number;
-  description: string;
-  duration?: number;
-  title?: string;
+function isRateLimited(ip: string): boolean {
+  const info = getRateLimitInfo(ip);
+  info.count++;
+  
+  return info.count > RATE_LIMIT;
 }
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please try again later.',
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+          }
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
@@ -127,12 +134,12 @@ export async function GET(request: NextRequest) {
     const result = await query(recipesQuery, queryParams);
 
     // Transform the data to match the expected format
-    const recipes = result.rows.map((row: RecipeRow) => ({
+    const recipes = result.rows.map((row) => ({
       ...row,
-      ingredients: Array.isArray(row.ingredients) ? row.ingredients.map((ing: IngredientData) => 
+      ingredients: Array.isArray(row.ingredients) ? row.ingredients.map((ing) => 
         `${ing.amount || ''} ${ing.unit || ''} ${ing.name}`.trim()
       ) : [],
-      steps: Array.isArray(row.steps) ? row.steps.map((step: StepData) => step.description) : []
+      steps: Array.isArray(row.steps) ? row.steps.map((step) => step.description) : []
     }));
 
     const hasMore = total > offset + limit;
@@ -146,8 +153,6 @@ export async function GET(request: NextRequest) {
       has_more: hasMore,
     });
   } catch (error: any) {
-    console.error('Error fetching recipes:', error);
-    
     return NextResponse.json(
       {
         success: false,
@@ -162,6 +167,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Check if PostgreSQL is configured
     if (!isPostgreSQLConfigured()) {
       return NextResponse.json(
         {
@@ -169,6 +175,33 @@ export async function POST(request: NextRequest) {
           error: 'Database not configured. Please configure PostgreSQL connection.',
         },
         { status: 503 }
+      );
+    }
+
+    // Authenticate user and check permissions
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Check if user has admin permissions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+      
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+    
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Admin access required' },
+        { status: 403 }
       );
     }
 
@@ -188,8 +221,8 @@ export async function POST(request: NextRequest) {
 
     // Insert recipe
     const recipeQuery = `
-      INSERT INTO recipes (title, description, image_url, prep_time, cook_time, servings, difficulty, category, cuisine, tags)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO recipes (title, description, image_url, prep_time, cook_time, servings, difficulty, category, cuisine, tags, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
 
@@ -203,7 +236,8 @@ export async function POST(request: NextRequest) {
       body.difficulty,
       body.category,
       body.cuisine,
-      body.tags || []
+      body.tags || [],
+      user.id
     ]);
 
     const recipe = recipeResult.rows[0];
@@ -235,8 +269,6 @@ export async function POST(request: NextRequest) {
       data: recipe,
     }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating recipe:', error);
-    
     return NextResponse.json(
       {
         success: false,

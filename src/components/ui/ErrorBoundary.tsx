@@ -27,11 +27,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({ errorInfo });
+    
     // Log to error reporting service in production
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
       // Example: Sentry.captureException(error, { contexts: { errorInfo } });
     }
-    this.setState({ errorInfo });
   }
 
   render() {
@@ -53,7 +55,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               We're sorry, but something unexpected happened. Our team has been notified and is working on a fix.
             </p>
             
-            {typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && this.state.error && (
+            {typeof window !== 'undefined' && window.location.hostname === 'localhost' && this.state.error && (
               <details className="text-left mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
                 <summary className="cursor-pointer font-medium text-red-800 mb-2">
                   Error Details (Development Mode)

@@ -79,7 +79,6 @@ chefito-monorepo/
 │   └── webhooks/            # Webhooks (webhooks.chefito.xyz)
 └── infrastructure/
     ├── netlify/             # Configurations Netlify
-    ├── vps/                 # Scripts VPS
     └── monitoring/          # Monitoring et logs
 ```
 

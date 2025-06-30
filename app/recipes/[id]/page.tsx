@@ -16,7 +16,7 @@ import { VoiceGuidedCooking } from '@/components/features/VoiceGuidedCooking';
 import { PremiumGate } from '@/components/features/PremiumGate';
 import { useToast } from '@/components/ui/Toast';
 import { useRevenueCat } from '@/hooks/useRevenueCat';
-import { apiService } from '@/services/api';
+import { demoRecipes } from '@/data/demo-recipes';
 import { Recipe } from '@/types';
 
 export default function RecipeDetailPage() {
@@ -27,31 +27,21 @@ export default function RecipeDetailPage() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showVoiceGuide, setShowVoiceGuide] = useState(false);
   const { showToast } = useToast();
-  const { isPremium, getFreeRecipesRemaining, markRecipeAsUsed } = useRevenueCat();
+  const { isPremium, getFreeRecipesRemaining } = useRevenueCat();
+
+  const slug = params.id as string | undefined;
 
   useEffect(() => {
-    if (params.id) {
-      loadRecipe(params.id as string);
+    if (slug) {
+      loadRecipe(slug);
     }
-  }, [params.id]);
+  }, [slug]);
 
-  const loadRecipe = async (id: string) => {
+  const loadRecipe = (slug: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const recipeData = await apiService.getRecipe(id);
-      setRecipe(recipeData);
-      
-      // Mark recipe as used for free users (if they can access it)
-      const recipeIndex = parseInt(id) - 1; // Assuming sequential IDs
-      if (!isPremium && recipeIndex < 2) {
-        markRecipeAsUsed();
-      }
-    } catch (error) {
-      showToast({
-        type: 'error',
-        title: 'Recipe Not Found',
-        message: 'The requested recipe could not be loaded.',
-      });
+      const recipeData = demoRecipes.find((r) => r.slug === slug || r.id === slug);
+      setRecipe(recipeData || null);
     } finally {
       setLoading(false);
     }
@@ -95,6 +85,13 @@ export default function RecipeDetailPage() {
     }
   };
 
+  const speak = (text: string) => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -131,8 +128,9 @@ export default function RecipeDetailPage() {
   }
 
   // Check if user can access this recipe
-  const recipeIndex = parseInt(params.id as string) - 1;
-  const canAccess = isPremium || recipeIndex < 2;
+  const freeSlugs = ['chickpea-salad', 'pasta-pesto', 'omelette-easy'];
+  const canAccess =
+    isPremium || (recipe ? freeSlugs.includes(recipe.slug ?? '') : false);
 
   // If user can't access, show premium gate
   if (!canAccess) {
@@ -154,7 +152,7 @@ export default function RecipeDetailPage() {
             <div className="mb-8">
               <div className="relative h-96 rounded-2xl overflow-hidden mb-6">
                 <Image
-                  src={recipe.image_url}
+                  src={recipe.image || recipe.image_url}
                   alt={recipe.title}
                   className="w-full h-full object-cover"
                 />
@@ -215,7 +213,7 @@ export default function RecipeDetailPage() {
         <div className="mb-8">
           <div className="relative h-96 rounded-2xl overflow-hidden mb-6">
             <Image
-              src={recipe.image_url}
+              src={recipe.image || recipe.image_url}
               alt={recipe.title}
               className="w-full h-full object-cover"
             />
@@ -259,6 +257,16 @@ export default function RecipeDetailPage() {
               <div className="font-bold">{totalTime}m</div>
             </Card>
           </div>
+
+
+          {/* Video Tutorial */}
+          {recipe.video_url && (
+            <div className="mb-8">
+              <div className="relative pb-[56.25%] h-0 overflow-hidden rounded-lg">
+                <iframe src={recipe.video_url} title={`${recipe.title} video`} allowFullScreen className="absolute top-0 left-0 w-full h-full" />
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 mb-8">
@@ -339,10 +347,13 @@ export default function RecipeDetailPage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-gray-700 leading-relaxed">{step}</p>
+                      <Button size="xs" variant="ghost" onClick={() => speak(step)} className="mt-1">
+                        Listen
+                      </Button>
                       {currentStep === index && (
                         <div className="mt-3 flex items-center space-x-2">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             onClick={() => setCurrentStep(Math.min(recipe.steps.length - 1, currentStep + 1))}
                             disabled={currentStep === recipe.steps.length - 1}
                           >

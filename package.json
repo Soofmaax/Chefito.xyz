@@ -1,5 +1,8 @@
 {
   "name": "chefito",
   "version": "1.0.0",
-  "type": "commonjs"
+  "type": "commonjs",
+  "engines": {
+    "node": "18.x"
+  }
 }

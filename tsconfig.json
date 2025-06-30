@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2019",
     "module": "commonjs",
-    "jsx": "react-jsx",                ← 🔥 ajout crucial
+    "jsx": "react-jsx",                
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,

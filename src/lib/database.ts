@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 
 // PostgreSQL connection for recipes
 const pool = new Pool({
@@ -22,18 +22,15 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err: Error) => {
-  console.error('❌ PostgreSQL connection error:', err.message);
-  
-  // Don't crash the application on connection errors
-  // Instead, we'll handle errors at the query level
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('❌ PostgreSQL connection error:', err);
+  }
 });
 
 // Helper function to execute queries with better error handling
 export async function query(text: string, params?: any[]) {
-  let client: PoolClient | null = null;
-  
+  const client = await pool.connect();
   try {
-    client = await pool.connect();
     const start = Date.now();
     const res = await client.query(text, params);
     const duration = Date.now() - start;
@@ -43,67 +40,34 @@ export async function query(text: string, params?: any[]) {
     }
     
     return res;
-  } catch (error: any) {
-    // Enhance error with query information for better debugging
-    const enhancedError = new Error(`Database query error: ${error.message}`);
-    enhancedError.cause = error;
-    
-    // In development, log the error
+  } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
-      console.error('Database query error:', {
-        error: error.message,
-        query: text,
-        params
-      });
+      console.error('Database query error:', error);
     }
-    
-    throw enhancedError;
+    throw error;
   } finally {
-    if (client) {
-      client.release();
-    }
+    client.release();
   }
 }
 
 // Check if PostgreSQL is configured
 export const isPostgreSQLConfigured = () => {
-  const requiredVars = [
+  return !!(
     process.env.DATABASE_URL || 
     (process.env.POSTGRES_HOST && 
      process.env.POSTGRES_DB && 
      process.env.POSTGRES_USER && 
      process.env.POSTGRES_PASSWORD)
-  ];
-  
-  return !!requiredVars[0];
+  );
 };
 
-// Get a direct client for transactions
-export async function getClient() {
-  return await pool.connect();
-}
-
-// Close the pool (useful for tests and scripts)
-export async function closePool() {
+// Graceful shutdown
+process.on('SIGINT', async () => {
   await pool.end();
-}
+  process.exit(0);
+});
 
-// Create a mock database for testing
-export function createMockDatabase() {
-  return {
-    query: async (text: string, params?: any[]) => {
-      console.log('Mock query:', { text, params });
-      return { rows: [], rowCount: 0 };
-    },
-    getClient: async () => {
-      return {
-        query: async (text: string, params?: any[]) => {
-          console.log('Mock client query:', { text, params });
-          return { rows: [], rowCount: 0 };
-        },
-        release: () => {}
-      };
-    },
-    closePool: async () => {}
-  };
-}
+process.on('SIGTERM', async () => {
+  await pool.end();
+  process.exit(0);
+});

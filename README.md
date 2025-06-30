@@ -115,6 +115,8 @@ ls -la out/
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# Replace these placeholders with your real Supabase project values.
+# The app falls back to demo mode if they aren't updated.
 
 # PostgreSQL VPS (Recipes)
 DATABASE_URL=postgresql://user:pass@your-vps-ip:5432/chefito_db

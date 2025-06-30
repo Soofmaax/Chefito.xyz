@@ -19,6 +19,7 @@ export interface Recipe {
   steps: string[];
   ingredients: string[];
   voice_url?: string;
+  video_url?: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   prep_time: number; // minutes
   cook_time: number; // minutes

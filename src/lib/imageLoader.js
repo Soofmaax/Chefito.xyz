@@ -1,10 +1,13 @@
-// Custom image loader pour Next.js export
+// Custom image loader pour Next.js
 export default function imageLoader({ src, width, quality }) {
-  // Si c'est déjà une URL complète, la retourner telle quelle
-  if (src.startsWith('http')) {
+  if (!src) return '';
+
+  // Si c'est une URL absolue (hébergée ailleurs), on ne touche pas
+  if (src.startsWith('http://') || src.startsWith('https://')) {
     return src;
   }
-  
-  // Pour les images locales, ajouter le préfixe approprié
-  return `${src}?w=${width}&q=${quality || 75}`;
+
+  // Sinon, on traite l'image locale
+  const q = quality || 75;
+  return `${src}?w=${width}&q=${q}`;
 }

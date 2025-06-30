@@ -113,7 +113,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         <div className="flex space-x-2 mt-auto">
           {isAccessible ? (
             <>
-              <Link href={`/recipes/${recipe.id}`} className="flex-1">
+              <Link href={`/recipes/${recipe.slug ?? recipe.id}`} className="flex-1">
                 <Button variant="primary" className="w-full">
                   View Recipe
                 </Button>

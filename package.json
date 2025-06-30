@@ -20,7 +20,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint --fix",
-    "lint:check": "echo lint passed",
+    "lint:check": "next lint",
     "type-check": "tsc -p tsconfig.cli.json",
     "clean": "rm -rf .next out node_modules/.cache",
     "build:clean": "npm run clean && npm install && npm run build",
@@ -44,8 +44,8 @@
     "@types/pg": "^8.10.9",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.2.18",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.0.4",
@@ -60,3 +60,4 @@
     "npm": ">=9.0.0"
   }
 }
+

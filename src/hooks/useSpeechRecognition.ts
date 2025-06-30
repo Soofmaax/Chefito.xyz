@@ -2,6 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition | undefined;
+    webkitSpeechRecognition: typeof SpeechRecognition | undefined;
+  }
+}
+
 interface SpeechRecognitionOptions {
   onResult?: (transcript: string) => void;
   onError?: (error: string) => void;
@@ -48,8 +55,9 @@ export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): Sp
   // Check browser support
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      setIsSupported(!!SpeechRecognition);
+      const SpeechRecognitionConstructor =
+        window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      setIsSupported(!!SpeechRecognitionConstructor);
     }
   }, []);
 
@@ -57,11 +65,12 @@ export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): Sp
   useEffect(() => {
     if (!isSupported || typeof window === 'undefined') return;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) return;
+    const SpeechRecognitionConstructor =
+      window.SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    const recognition = new SpeechRecognition();
+    if (!SpeechRecognitionConstructor) return;
+
+    const recognition = new SpeechRecognitionConstructor();
     recognition.continuous = continuous;
     recognition.interimResults = interimResults;
     recognition.lang = language;
@@ -201,3 +210,5 @@ export const useSpeechRecognition = (options: SpeechRecognitionOptions = {}): Sp
     error,
   };
 };
+
+export {};

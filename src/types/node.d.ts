@@ -24,4 +24,12 @@ declare namespace NodeJS {
   interface Timeout {}
 }
 
+declare var process: {
+  env: NodeJS.ProcessEnv;
+};
+
+declare module 'child_process';
+declare module 'path';
+declare module 'assert';
+
 export {};

@@ -117,7 +117,6 @@ exports.handler = async (event, context) => {
         ? recipe.steps.map((step) => step.description) 
         : [];
     } catch (dbError) {
-      console.error('Database error:', dbError);
       
       // Demo recipe if database query fails
       recipe = {
@@ -202,7 +201,6 @@ If the question is not related to cooking or this recipe, politely redirect the 
         }),
       };
     } catch (ollamaError) {
-      console.error('Error calling Ollama API:', ollamaError);
       
       // Fallback response if Ollama is not available
       return {
@@ -219,7 +217,6 @@ If the question is not related to cooking or this recipe, politely redirect the 
       };
     }
   } catch (error) {
-    console.error('Error in chef-ia function:', error);
     
     return {
       statusCode: 500,

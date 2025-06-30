@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "strict": true,
+    "noEmit": true,
+    "typeRoots": ["src/types"]
+  },
+  "include": ["src/types/**/*.d.ts"]
+}

@@ -13,7 +13,6 @@ const pool = new Pool({
 
 const createTables = async () => {
   try {
-    console.log('🚀 Creating database tables...');
 
     // Enable UUID extension
     await pool.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
@@ -126,9 +125,7 @@ const createTables = async () => {
         EXECUTE FUNCTION update_recipe_rating();
     `);
 
-    console.log('✅ Database tables created successfully!');
   } catch (error) {
-    console.error('❌ Error creating tables:', error);
     process.exit(1);
   } finally {
     await pool.end();

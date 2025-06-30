@@ -70,7 +70,6 @@ exports.handler = async (event, context) => {
         };
     }
   } catch (error) {
-    console.error('Function error:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -178,7 +177,6 @@ async function getRecipes(params) {
       }),
     };
   } catch (error) {
-    console.error('Error fetching recipes:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -258,7 +256,6 @@ async function getRecipe(id) {
       }),
     };
   } catch (error) {
-    console.error('Error fetching recipe:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -318,7 +315,6 @@ async function createRecipe(recipeData) {
       }),
     };
   } catch (error) {
-    console.error('Error creating recipe:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -389,7 +385,6 @@ async function updateRecipe(id, updates) {
       }),
     };
   } catch (error) {
-    console.error('Error updating recipe:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,
@@ -428,7 +423,6 @@ async function deleteRecipe(id) {
       }),
     };
   } catch (error) {
-    console.error('Error deleting recipe:', error);
     return {
       statusCode: 500,
       headers: corsHeaders,

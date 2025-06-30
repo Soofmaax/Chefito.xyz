@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error checking subscription status:', error);
     
     return NextResponse.json(
       {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { rateLimit } from '@/lib/rateLimit';
 
 interface RecipeRow {
   id: string;
@@ -36,8 +37,18 @@ interface StepData {
   title?: string;
 }
 
+export function isAdmin(request: NextRequest): boolean {
+  const auth = request.headers.get('authorization');
+  const token = auth?.replace('Bearer ', '');
+  return token === process.env.ADMIN_SECRET_KEY;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
@@ -146,7 +157,6 @@ export async function GET(request: NextRequest) {
       has_more: hasMore,
     });
   } catch (error: any) {
-    console.error('Error fetching recipes:', error);
     
     return NextResponse.json(
       {
@@ -160,6 +170,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+    if (!isAdmin(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     
     if (!isPostgreSQLConfigured()) {
@@ -235,7 +252,6 @@ export async function POST(request: NextRequest) {
       data: recipe,
     }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating recipe:', error);
     
     return NextResponse.json(
       {

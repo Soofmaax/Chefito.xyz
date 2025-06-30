@@ -16,11 +16,9 @@ const pool = new Pool({
 
 // Test connection
 pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
 });
 
 pool.on('error', (err: Error) => {
-  console.error('❌ PostgreSQL connection error:', err);
 });
 
 export { pool };
@@ -31,10 +29,8 @@ export async function query(text: string, params?: any[]) {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
     return res;
   } catch (error) {
-    console.error('Database query error:', error);
     throw error;
   }
 }

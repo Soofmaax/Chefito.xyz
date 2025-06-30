@@ -308,4 +308,4 @@ AI: "For step 3 of your fried rice recipe, if the rice is sticky,
 **🏆 Built with ❤️ for World's Largest Hackathon by Bolt**  
 **🍳 Making cooking accessible with AI, one recipe at a time**
 
-*Enhanced with AI Assistant by Salwa Essafi (@Soofmaax) - January 2025*
+*Enhanced with AI Assistant by Salwa Essafi (@Soofmaax) - June 2025*

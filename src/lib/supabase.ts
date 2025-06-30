@@ -9,14 +9,24 @@ const isValidUrl = (url: string | undefined): boolean => {
   if (!url) return false;
   try {
     new URL(url);
-    return !url.includes('your_supabase_url_here') && !url.includes('demo.supabase.co');
+    return (
+      !url.includes('your_supabase_url_here') &&
+      !url.includes('your-project.supabase.co') &&
+      !url.includes('demo.supabase.co')
+    );
   } catch {
     return false;
   }
 };
 
 const isValidKey = (key: string | undefined): boolean => {
-  return !!(key && key !== 'your_supabase_anon_key_here' && key !== 'demo-key' && key.length > 10);
+  return !!(
+    key &&
+    key !== 'your_supabase_anon_key_here' &&
+    key !== 'your_supabase_anon_key' &&
+    key !== 'demo-key' &&
+    key.length > 10
+  );
 };
 
 const isConfigured = isValidUrl(supabaseUrl) && isValidKey(supabaseAnonKey);

@@ -56,6 +56,7 @@ export interface Database {
           cuisine: string
           tags: string[]
           created_by: string
+          video_url: string | null
           created_at: string
           updated_at: string
         }
@@ -74,6 +75,7 @@ export interface Database {
           cuisine: string
           tags?: string[]
           created_by: string
+          video_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -90,6 +92,7 @@ export interface Database {
           category?: string
           cuisine?: string
           tags?: string[]
+          video_url?: string | null
           updated_at?: string
         }
       }

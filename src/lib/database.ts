@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 
-// PostgreSQL connection for recipes
+// PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   host: process.env.POSTGRES_HOST,
@@ -14,23 +14,38 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// Test connection
+// Connection management
+let isConnected = false;
+
 pool.on('connect', () => {
+  isConnected = true;
 });
 
-pool.on('error', (err: Error) => {
+pool.on('error', (err) => {
+  isConnected = false;
 });
 
-export { pool };
-
-// Helper function to execute queries
+// Helper function to execute queries with logging and error handling
 export async function query(text: string, params?: any[]) {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
+    
+    // Only log in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Executed query', {
+        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        duration,
+        rows: res.rowCount
+      });
+    }
+    
     return res;
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Database query error:', error);
+    }
     throw error;
   }
 }
@@ -44,4 +59,23 @@ export const isPostgreSQLConfigured = () => {
      process.env.POSTGRES_USER && 
      process.env.POSTGRES_PASSWORD)
   );
+};
+
+// Get connection status
+export const getConnectionStatus = async () => {
+  if (!isPostgreSQLConfigured()) {
+    return { connected: false, message: 'PostgreSQL not configured' };
+  }
+  
+  try {
+    await pool.query('SELECT 1');
+    return { connected: true, message: 'Connected to PostgreSQL' };
+  } catch (error) {
+    return { connected: false, message: 'Failed to connect to PostgreSQL' };
+  }
+};
+
+// Close pool (for graceful shutdown)
+export const closePool = async () => {
+  await pool.end();
 };

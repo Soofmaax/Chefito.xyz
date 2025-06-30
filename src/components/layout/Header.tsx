@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { Menu, X, ChefHat, User, Crown, Settings } from 'lucide-react';
+import { Menu, X, ChefHat, User, Crown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useAuth } from '@/hooks/useAuth';
+import { ThemeToggle } from './ThemeToggle';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,16 +15,15 @@ export const Header: React.FC = () => {
   const { user, loading } = useAuth();
 
   const navigation = [
+    { name: 'Home', href: '/' },
     { name: 'Recipes', href: '/recipes' },
-    { name: 'Pricing', href: '/pricing' },
     { name: 'About', href: '/about' },
-    { name: 'Admin', href: '/admin' },
   ];
 
   const isActive = (href: string) => pathname === href;
 
   return (
-    <header className="bg-white shadow-lg border-b border-gray-100 sticky top-0 z-40">
+    <header className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -37,7 +37,7 @@ export const Header: React.FC = () => {
           </Link>
           
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8" aria-label="Main navigation">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -45,8 +45,8 @@ export const Header: React.FC = () => {
                 className={clsx(
                   'font-medium transition-colors relative',
                   isActive(item.href)
-                    ? 'text-orange-600'
-                    : 'text-gray-600 hover:text-orange-500'
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-300'
                 )}
               >
                 {item.name}
@@ -88,6 +88,8 @@ export const Header: React.FC = () => {
                 </Link>
               </>
             )}
+
+            <ThemeToggle />
             
             {/* Bolt Logo in Header - Full button size */}
             <a 
@@ -135,12 +137,14 @@ export const Header: React.FC = () => {
                 <Menu className="w-6 h-6 text-gray-600" />
               )}
             </Button>
+
+            <ThemeToggle />
           </div>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4 bg-white">
+          <div className="md:hidden border-t border-gray-200 py-4 bg-white" aria-label="Mobile navigation">
             <div className="space-y-3">
               {/* Navigation Links */}
               {navigation.map((item) => (
@@ -150,8 +154,8 @@ export const Header: React.FC = () => {
                   className={clsx(
                     'block px-3 py-3 rounded-md font-medium transition-colors text-base',
                     isActive(item.href)
-                      ? 'text-orange-600 bg-orange-50 border-l-4 border-orange-600'
-                      : 'text-gray-600 hover:text-orange-500 hover:bg-gray-50'
+                      ? 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-gray-800 border-l-4 border-orange-600'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   )}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -168,13 +172,13 @@ export const Header: React.FC = () => {
                 ) : user ? (
                   <>
                     <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
-                      <div className="flex items-center px-3 py-3 text-gray-600 hover:text-orange-500 hover:bg-gray-50 rounded-md transition-colors">
+                      <div className="flex items-center px-3 py-3 text-gray-600 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors">
                         <User className="w-5 h-5 mr-3" />
                         <span className="font-medium">Profile</span>
                       </div>
                     </Link>
                     <Link href="/pricing" onClick={() => setIsMenuOpen(false)}>
-                      <div className="flex items-center px-3 py-3 text-orange-600 hover:text-orange-500 hover:bg-orange-50 rounded-md transition-colors">
+                      <div className="flex items-center px-3 py-3 text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-gray-700 rounded-md transition-colors">
                         <Crown className="w-5 h-5 mr-3" />
                         <span className="font-medium">Go Premium</span>
                       </div>

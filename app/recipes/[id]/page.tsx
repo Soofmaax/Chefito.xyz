@@ -295,10 +295,23 @@ export default function RecipeDetailPage() {
 
           {/* Simple Voice Player for Introduction */}
           {!showVoiceGuide && (
-            <VoicePlayer 
+            <VoicePlayer
               text={`Bienvenue dans la recette ${recipe.title}. Cette recette sert ${recipe.servings} personnes et prend environ ${totalTime} minutes à préparer. Cliquez sur "Guidage vocal étape par étape" pour commencer la cuisine assistée.`}
               className="mb-8"
             />
+          )}
+
+          {recipe.video_url && (
+            <div className="relative w-full mb-8" aria-label="Recipe video">
+              <div className="aspect-video rounded-lg overflow-hidden">
+                <video
+                  src={recipe.video_url}
+                  className="w-full h-full"
+                  controls
+                  title={`${recipe.title} video`}
+                />
+              </div>
+            </div>
           )}
         </div>
 

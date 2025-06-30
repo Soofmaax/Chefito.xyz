@@ -11,12 +11,14 @@ interface RecipeCardProps {
   recipe: Recipe;
   showVoiceButton?: boolean;
   recipeIndex?: number; // For free tier limitation
+  hrefPrefix?: string; // allow custom link base
 }
 
-export const RecipeCard: React.FC<RecipeCardProps> = ({ 
-  recipe, 
+export const RecipeCard: React.FC<RecipeCardProps> = ({
+  recipe,
   showVoiceButton = true,
-  recipeIndex = 0
+  recipeIndex = 0,
+  hrefPrefix = '/recipes'
 }) => {
   const { isPremium, getFreeRecipesRemaining } = useRevenueCat();
   
@@ -113,7 +115,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         <div className="flex space-x-2 mt-auto">
           {isAccessible ? (
             <>
-              <Link href={`/recipes/${recipe.id}`} className="flex-1">
+              <Link href={`${hrefPrefix}/${recipe.id}`} className="flex-1">
                 <Button variant="primary" className="w-full">
                   View Recipe
                 </Button>

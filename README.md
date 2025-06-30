@@ -287,6 +287,16 @@ AI: "For step 3 of your fried rice recipe, if the rice is sticky,
 - **Streaming responses**: Real-time AI response delivery
 - **Fallback responses**: Instant fallbacks when AI unavailable
 
+## 🛠️ CLI Usage
+
+Run the following command to read a recipe from your local PostgreSQL database:
+
+```bash
+npm run read-recipe <recipe_id>
+```
+
+The command outputs the recipe as JSON without making any network requests.
+
 ## 👥 **About the Creator**
 
 ### **Salwa Essafi (@Soofmaax)**

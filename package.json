@@ -17,7 +17,8 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "echo build skipped",
+    "build": "NODE_ENV=production next build",
+    "type-check": "tsc --noEmit",
     "start": "next start",
     "lint": "node scripts/run-eslint.js",
     "lint:check": "node scripts/run-eslint.js",

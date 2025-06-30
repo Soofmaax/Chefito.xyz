@@ -7,15 +7,13 @@ const nextConfig = {
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
-
   images: {
     unoptimized: true,
     domains: ['images.pexels.com'],
-    // Si tu utilises bien ce fichier → garde-le. Sinon, retire cette ligne.
     loader: 'custom',
-    loaderFile: path.resolve(__dirname, 'src/lib/imageLoader.js')
+    // Utilise un chemin relatif simple au lieu de path.resolve
+    loaderFile: './src/lib/imageLoader.js'
   },
-
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -34,20 +32,15 @@ const nextConfig = {
         querystring: false,
       };
     }
-
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
     };
-
     return config;
   },
-
   typescript: {
     ignoreBuildErrors: false,
   }
-
-  // ❌ output: 'standalone' retiré pour Netlify
 };
 
 module.exports = nextConfig;

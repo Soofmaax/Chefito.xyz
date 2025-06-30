@@ -32,6 +32,13 @@
     "bulk-import": "ts-node src/cli/bulkImportRecipes.ts",
     "import-recipes": "ts-node src/cli/importRecipes.ts",
     "export-template": "ts-node src/cli/exportRecipesTemplate.ts",
+    "build:web": "next build",
+    "build:capacitor": "CAPACITOR_BUILD=true next build",
+    "cap:build": "npm run build:capacitor && cap sync",
+    "cap:run:android": "npm run cap:build && cap run android",
+    "cap:run:ios": "npm run cap:build && cap run ios",
+    "cap:build:android": "npm run cap:build && cap build android",
+    "cap:build:ios": "npm run cap:build && cap build ios",
     "test": "mocha -r ts-node/register test/**/*.test.ts"
   },
   "dependencies": {
@@ -58,10 +65,12 @@
     "csv-stringify": "^6.4.6",
     "lucide-react": "^0.294.0",
     "next": "^14.0.4",
+    "next-pwa": "^5.6.0",
     "pg": "^8.11.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tailwind-merge": "^2.2.0"
+    "tailwind-merge": "^2.2.0",
+    "typescript": "5.8.3"
   },
   "devDependencies": {
     "@capacitor/cli": "^5.6.0",
@@ -78,8 +87,7 @@
     "mocha": "^10.3.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
-    "ts-node": "^10.9.2",
-    "typescript": "5.8.3"
+    "ts-node": "^10.9.2"
   },
   "engines": {
     "node": ">=18.0.0",

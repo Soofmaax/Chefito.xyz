@@ -14,6 +14,19 @@ import { SKILL_LEVELS, DIETARY_RESTRICTIONS } from '@/constants';
 import { Loading } from '@/components/ui/Loading';
 import { supabase } from '@/lib/supabase';
 
+// Types
+interface ActivityItem {
+  action: string;
+  time: string;
+}
+
+interface FormData {
+  fullName: string;
+  email: string;
+  skillLevel: string;
+  dietaryRestrictions: string[];
+}
+
 export default function ProfilePage() {
   const { user, updateProfile, loading: authLoading } = useAuth();
   const { showToast } = useToast();
@@ -24,8 +37,8 @@ export default function ProfilePage() {
     cookingHours: 0,
     memberSince: '',
   });
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [formData, setFormData] = useState({
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
     skillLevel: 'beginner',
@@ -110,6 +123,7 @@ export default function ProfilePage() {
         })));
       }
     } catch (error) {
+      // Silent error handling
     }
   };
 
@@ -305,7 +319,7 @@ export default function ProfilePage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
               <div className="space-y-3">
                 {recentActivity.length > 0 ? (
-                  recentActivity.map((activity: any, index) => (
+                  recentActivity.map((activity, index) => (
                     <div key={index} className="text-sm">
                       <p className="font-medium text-gray-900">{activity.action}</p>
                       <p className="text-gray-500">{activity.time}</p>

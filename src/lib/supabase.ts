@@ -29,7 +29,7 @@ if (!isConfigured) {
 const demoUrl = 'https://demo.supabase.co';
 const demoKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
-export const supabase = createClient<Database>(
+export const supabase = createClient(
   isConfigured ? supabaseUrl! : demoUrl,
   isConfigured ? supabaseAnonKey! : demoKey,
   {
@@ -38,8 +38,8 @@ export const supabase = createClient<Database>(
       persistSession: true,
       detectSessionInUrl: true,
     },
-  }
-);
+  },
+) as any;
 
 // Server-side client for API routes (only for server-side usage)
 export const createServerSupabaseClient = () => {
@@ -52,20 +52,20 @@ export const createServerSupabaseClient = () => {
   
   if (!isConfigured || !serviceRoleKey || serviceRoleKey === 'your_service_role_key_here') {
     console.warn('⚠️ Server-side Supabase not configured. Using demo client.');
-    return createClient<Database>(demoUrl, demoKey, {
+    return createClient(demoUrl, demoKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
-    });
+    }) as any;
   }
 
-  return createClient<Database>(supabaseUrl!, serviceRoleKey, {
+  return createClient(supabaseUrl!, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
-  });
+  }) as any;
 };
 
 // Check if Supabase is properly configured

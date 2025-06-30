@@ -10,9 +10,8 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Loading, RecipeCardSkeleton } from '@/components/ui/Loading';
 import { RecipeCard } from '@/components/features/RecipeCard';
-import { useToast } from '@/components/ui/Toast';
 import { useRevenueCat } from '@/hooks/useRevenueCat';
-import { apiService } from '@/services/api';
+import { demoRecipes } from '@/data/demo-recipes';
 import { Recipe } from '@/types';
 import { RECIPE_DIFFICULTIES } from '@/constants';
 import Link from 'next/link';
@@ -24,7 +23,6 @@ export default function RecipesPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const { showToast } = useToast();
   const { isPremium, getFreeRecipesRemaining } = useRevenueCat();
 
   useEffect(() => {
@@ -34,20 +32,8 @@ export default function RecipesPage() {
   const loadRecipes = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getRecipes({
-        page: currentPage,
-        limit: 12,
-        search: searchTerm || undefined,
-      });
-      
-      setRecipes(response.data);
-      setHasMore(response.has_more);
-    } catch (error) {
-      showToast({
-        type: 'error',
-        title: 'Error Loading Recipes',
-        message: 'Failed to load recipes. Please try again.',
-      });
+      setRecipes(demoRecipes);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }

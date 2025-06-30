@@ -328,7 +328,7 @@ export default function LegalPage() {
 
         {/* Last Updated */}
         <div className="text-center mt-8 text-gray-500">
-          <p>Last updated: January 2025</p>
+          <p>Last updated: June 2025</p>
           <p>Version: 1.0.0 (Hackathon Submission)</p>
           <p className="text-sm mt-2">
             🏆 Created for World's Largest Hackathon by Bolt

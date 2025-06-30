@@ -39,7 +39,7 @@ export const supabase = createClient<Database>(
       detectSessionInUrl: true,
     },
   }
-);
+) as any;
 
 // Server-side client for API routes (only for server-side usage)
 export const createServerSupabaseClient = () => {
@@ -57,7 +57,7 @@ export const createServerSupabaseClient = () => {
         autoRefreshToken: false,
         persistSession: false,
       },
-    });
+    }) as any;
   }
 
   return createClient<Database>(supabaseUrl!, serviceRoleKey, {
@@ -65,7 +65,7 @@ export const createServerSupabaseClient = () => {
       autoRefreshToken: false,
       persistSession: false,
     },
-  });
+  }) as any;
 };
 
 // Check if Supabase is properly configured

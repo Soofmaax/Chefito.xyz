@@ -260,6 +260,16 @@ export default function RecipeDetailPage() {
             </Card>
           </div>
 
+
+          {/* Video Tutorial */}
+          {recipe.video_url && (
+            <div className="mb-8">
+              <div className="relative pb-[56.25%] h-0 overflow-hidden rounded-lg">
+                <iframe src={recipe.video_url} title={`${recipe.title} video`} allowFullScreen className="absolute top-0 left-0 w-full h-full" />
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4 mb-8">
             <Button 

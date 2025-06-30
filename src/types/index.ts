@@ -16,6 +16,8 @@ export interface Recipe {
   title: string;
   description: string;
   image_url: string;
+  /** Optional link to an instructional video */
+  video_url?: string;
   steps: string[];
   ingredients: string[];
   voice_url?: string;

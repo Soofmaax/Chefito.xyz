@@ -24,10 +24,10 @@
     "type-check": "tsc -p tsconfig.cli.json",
     "clean": "rm -rf .next out node_modules/.cache",
     "build:clean": "npm run clean && npm install && npm run build",
-    "prebuild": "npm run type-check"
-    ,"test": "node --test"
-    ,"read-recipe": "ts-node src/cli/readRecipe.ts"
-    ,"import:supabase": "node scripts/import_supabase_recipes.js"
+    "prebuild": "npm run type-check",
+    "test": "node --test",
+    "read-recipe": "ts-node src/cli/readRecipe.ts",
+    "import:supabase": "node scripts/import_supabase_recipes.js"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.8.7",
@@ -39,9 +39,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.2.0",
-    "purchases-js": "^3.0.0"
-  },
-  "devDependencies": {
+    "@revenuecat/purchases-js": "^3.0.0",
     "@types/node": "^20.19.1",
     "@types/pg": "^8.10.9",
     "@types/react": "^18.3.23",

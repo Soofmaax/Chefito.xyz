@@ -1,6 +1,6 @@
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 
-// PostgreSQL connection pool
+// PostgreSQL connection for recipes
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   host: process.env.POSTGRES_HOST,
@@ -11,71 +11,99 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased timeout for better reliability
 });
 
-// Connection management
-let isConnected = false;
-
+// Test connection
 pool.on('connect', () => {
-  isConnected = true;
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('✅ Connected to PostgreSQL database');
+  }
 });
 
-pool.on('error', (err) => {
-  isConnected = false;
+pool.on('error', (err: Error) => {
+  console.error('❌ PostgreSQL connection error:', err.message);
+  
+  // Don't crash the application on connection errors
+  // Instead, we'll handle errors at the query level
 });
 
-// Helper function to execute queries with logging and error handling
+// Helper function to execute queries with better error handling
 export async function query(text: string, params?: any[]) {
-  const start = Date.now();
+  let client: PoolClient | null = null;
+  
   try {
-    const res = await pool.query(text, params);
+    client = await pool.connect();
+    const start = Date.now();
+    const res = await client.query(text, params);
     const duration = Date.now() - start;
     
-    // Only log in development
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Executed query', {
-        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
-        duration,
-        rows: res.rowCount
-      });
+      console.log('Executed query', { text, duration, rows: res.rowCount });
     }
     
     return res;
-  } catch (error) {
+  } catch (error: any) {
+    // Enhance error with query information for better debugging
+    const enhancedError = new Error(`Database query error: ${error.message}`);
+    enhancedError.cause = error;
+    
+    // In development, log the error
     if (process.env.NODE_ENV !== 'production') {
-      console.error('Database query error:', error);
+      console.error('Database query error:', {
+        error: error.message,
+        query: text,
+        params
+      });
     }
-    throw error;
+    
+    throw enhancedError;
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 }
 
 // Check if PostgreSQL is configured
 export const isPostgreSQLConfigured = () => {
-  return !!(
+  const requiredVars = [
     process.env.DATABASE_URL || 
     (process.env.POSTGRES_HOST && 
      process.env.POSTGRES_DB && 
      process.env.POSTGRES_USER && 
      process.env.POSTGRES_PASSWORD)
-  );
-};
-
-// Get connection status
-export const getConnectionStatus = async () => {
-  if (!isPostgreSQLConfigured()) {
-    return { connected: false, message: 'PostgreSQL not configured' };
-  }
+  ];
   
-  try {
-    await pool.query('SELECT 1');
-    return { connected: true, message: 'Connected to PostgreSQL' };
-  } catch (error) {
-    return { connected: false, message: 'Failed to connect to PostgreSQL' };
-  }
+  return !!requiredVars[0];
 };
 
-// Close pool (for graceful shutdown)
-export const closePool = async () => {
+// Get a direct client for transactions
+export async function getClient() {
+  return await pool.connect();
+}
+
+// Close the pool (useful for tests and scripts)
+export async function closePool() {
   await pool.end();
-};
+}
+
+// Create a mock database for testing
+export function createMockDatabase() {
+  return {
+    query: async (text: string, params?: any[]) => {
+      console.log('Mock query:', { text, params });
+      return { rows: [], rowCount: 0 };
+    },
+    getClient: async () => {
+      return {
+        query: async (text: string, params?: any[]) => {
+          console.log('Mock client query:', { text, params });
+          return { rows: [], rowCount: 0 };
+        },
+        release: () => {}
+      };
+    },
+    closePool: async () => {}
+  };
+}

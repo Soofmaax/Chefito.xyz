@@ -3,9 +3,22 @@
     "target": "es2019",
     "module": "commonjs",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "strict": true,
     "noEmit": true,
-    "typeRoots": ["src/types"]
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "typeRoots": ["node_modules/@types", "src/types"]
   },
-  "include": ["src/types/**/*.d.ts"]
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "out"
+  ]
 }

@@ -108,8 +108,8 @@ export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
       content: question.trim(),
       timestamp: new Date(),
     };
-
-    setMessages(prev => [...prev, userMessage]);
+    
+    setMessages((prev: Message[]) => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
 
@@ -139,7 +139,7 @@ export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev: Message[]) => [...prev, assistantMessage]);
 
       // Speak the response if voice is enabled
       if (voiceEnabled) {
@@ -161,8 +161,8 @@ export const AICookingAssistant: React.FC<AICookingAssistantProps> = ({
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, errorMessage]);
-
+      setMessages((prev: Message[]) => [...prev, errorMessage]);
+      
       showToast({
         type: 'error',
         title: 'Erreur de l\'assistant',

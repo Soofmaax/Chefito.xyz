@@ -32,7 +32,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitAny": true,
-    "types": ["node", "react"]
+    "typeRoots": ["src/types"]
   },
   "include": [
     "next-env.d.ts",

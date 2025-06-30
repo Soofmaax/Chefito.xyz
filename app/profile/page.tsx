@@ -110,7 +110,6 @@ export default function ProfilePage() {
         })));
       }
     } catch (error) {
-      console.error('Error loading user stats:', error);
     }
   };
 

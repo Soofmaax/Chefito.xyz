@@ -1,0 +1,10 @@
+declare module 'next/server';
+declare module 'next/link';
+declare module 'next/navigation';
+declare module 'lucide-react';
+declare module '@supabase/supabase-js';
+declare module 'purchases-js';
+declare module 'pg';
+declare module 'clsx';
+declare module 'tailwind-merge';
+declare module 'next';

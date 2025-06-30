@@ -287,6 +287,26 @@ AI: "For step 3 of your fried rice recipe, if the rice is sticky,
 - **Streaming responses**: Real-time AI response delivery
 - **Fallback responses**: Instant fallbacks when AI unavailable
 
+## 🛠️ CLI Usage
+
+Run the following command to read a recipe from your local PostgreSQL database:
+
+```bash
+npm run read-recipe <recipe_id>
+```
+
+The command outputs the recipe as JSON without making any network requests.
+
+To migrate existing recipes from your Supabase project into the local
+PostgreSQL database, run:
+
+```bash
+npm run import:supabase
+```
+
+Ensure the Supabase and PostgreSQL connection variables are correctly set in
+`.env.local` before running the script.
+
 ## 👥 **About the Creator**
 
 ### **Salwa Essafi (@Soofmaax)**

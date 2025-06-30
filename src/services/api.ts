@@ -46,7 +46,6 @@ export const recipeApi = {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching recipes:', error);
       if (error instanceof ApiError) throw error;
       throw new ApiError('Failed to fetch recipes', 500);
     }
@@ -71,7 +70,6 @@ export const recipeApi = {
       const data = await response.json();
       return data.data;
     } catch (error) {
-      console.error('Error fetching recipe:', error);
       if (error instanceof ApiError) throw error;
       throw new ApiError('Failed to fetch recipe', 500);
     }
@@ -94,7 +92,6 @@ export const recipeApi = {
       const data = await response.json();
       return data.data;
     } catch (error) {
-      console.error('Error creating recipe:', error);
       if (error instanceof ApiError) throw error;
       throw new ApiError('Failed to create recipe', 500);
     }
@@ -120,7 +117,6 @@ export const recipeApi = {
       const data = await response.json();
       return data.data;
     } catch (error) {
-      console.error('Error updating recipe:', error);
       if (error instanceof ApiError) throw error;
       throw new ApiError('Failed to update recipe', 500);
     }
@@ -142,7 +138,6 @@ export const recipeApi = {
         throw new ApiError('Failed to delete recipe', response.status);
       }
     } catch (error) {
-      console.error('Error deleting recipe:', error);
       if (error instanceof ApiError) throw error;
       throw new ApiError('Failed to delete recipe', 500);
     }
@@ -182,7 +177,6 @@ export const authApi = {
           });
 
         if (profileError) {
-          console.error('Error creating profile:', profileError);
         }
       }
 
@@ -196,7 +190,6 @@ export const authApi = {
         updated_at: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('Sign up error:', error);
       throw new ApiError(error.message || 'Failed to sign up', 400);
     }
   },
@@ -231,7 +224,6 @@ export const authApi = {
         updated_at: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('Sign in error:', error);
       throw new ApiError(error.message || 'Failed to sign in', 400);
     }
   },
@@ -254,7 +246,6 @@ export const ttsApi = {
 
       return await response.blob();
     } catch (error) {
-      console.error('TTS error:', error);
       // Return empty blob as fallback
       return new Blob([''], { type: 'audio/mpeg' });
     }

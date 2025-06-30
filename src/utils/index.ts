@@ -128,7 +128,6 @@ export function copyToClipboard(text: string): Promise<void> {
     try {
       document.execCommand('copy');
     } catch (error) {
-      console.error('Failed to copy text: ', error);
       throw new Error('Failed to copy text');
     } finally {
       textArea.remove();

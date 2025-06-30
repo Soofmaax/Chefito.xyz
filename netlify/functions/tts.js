@@ -79,7 +79,6 @@ exports.handler = async (event, context) => {
       isBase64Encoded: true,
     };
   } catch (error) {
-    console.error('TTS Error:', error);
     
     return {
       statusCode: 503,

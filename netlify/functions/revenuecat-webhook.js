@@ -40,7 +40,6 @@ exports.handler = async (event, context) => {
     const webhookData = JSON.parse(event.body);
     const eventType = webhookData.event?.type;
     
-    console.log(`📦 RevenueCat webhook received: ${eventType}`);
     
     // Log the webhook event
     await supabase.from('subscription_events').insert({
@@ -80,7 +79,6 @@ exports.handler = async (event, context) => {
       }),
     };
   } catch (error) {
-    console.error('❌ Webhook error:', error);
     
     return {
       statusCode: 500,

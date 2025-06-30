@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, isPostgreSQLConfigured } from '@/lib/database';
+import { rateLimit } from '@/lib/rateLimit';
+import { isAdmin } from '../route';
 
 export async function GET(
   request: NextRequest,
@@ -77,7 +79,6 @@ export async function GET(
       data: transformedRecipe,
     });
   } catch (error: any) {
-    console.error('Error fetching recipe:', error);
     
     return NextResponse.json(
       {
@@ -94,6 +95,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+    if (!isAdmin(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await request.json();
     
     if (!isPostgreSQLConfigured()) {
@@ -158,7 +166,6 @@ export async function PUT(
       data: result.rows[0],
     });
   } catch (error: any) {
-    console.error('Error updating recipe:', error);
     
     return NextResponse.json(
       {
@@ -175,6 +182,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!rateLimit(ip)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+    if (!isAdmin(request)) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
     if (!isPostgreSQLConfigured()) {
       return NextResponse.json(
         {
@@ -205,7 +219,6 @@ export async function DELETE(
       message: 'Recipe deleted successfully',
     });
   } catch (error: any) {
-    console.error('Error deleting recipe:', error);
     
     return NextResponse.json(
       {
